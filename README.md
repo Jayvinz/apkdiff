@@ -1,21 +1,23 @@
 # apkdiff
 
-An APK size diff tool. It compares two APK versions and reports added / deleted / modified
-classes and resources with their size changes.
+An APK size diff tool for Android. It compares two APK versions, attributes DEX bytes to
+individual classes, compares every resource entry, and reports exactly what was added, removed,
+modified or renamed — along with the byte impact of each change.
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-The repository contains three equivalent implementations. This root README uses **Python** for all
-examples; each implementation has its own detailed documentation:
+APK/Bundle growth is easy to ship by accident and hard to explain after release. apkdiff is built
+for continuous APK/Bundle size monitoring in the pull-request flow: the same comparison runs in
+CI, produces a detailed report, and fails the build when the APK grows beyond a configurable
+threshold (**500 KB** by default).
 
-| Implementation | Language | Detailed docs | Packages |
-| --- | --- | --- | --- |
-| [`py/`](py/) | Python 3.7+ | [`py/README.md`](py/README.md) | PyPI: `apkdiff-core` / `apkdiff` |
-| [`jvm/`](jvm/) | Java 11 | [`jvm/README.md`](jvm/README.md) | Maven: `top.jayvin.apkdiff:apkdiff-core` |
-| [`js/`](js/) | Node.js 18+ | [`js/README.md`](js/README.md) | npm: `@jayvinz/apkdiff-core` / `@jayvinz/apkdiff-cli` |
+[`monitor-apk-size-ci/`](monitor-apk-size-ci/) contains ready-to-use integrations for GitHub
+Actions, GitLab CI and Gerrit + Jenkins. This repository runs the GitHub integration against its
+bundled fixture APKs on every PR to `main`.
 
-All three share the same algorithm, CLI options and report format. For the same fixture APKs,
-their JSON / HTML / Markdown reports are **byte-for-byte identical** (LF line endings).
+The repository ships equivalent Python, Java 11 and Node.js implementations that share the same
+algorithm, CLI options and report format. This README uses Python for examples; each implementation
+has its own detailed documentation: [`py/`](py/), [`jvm/`](jvm/), [`js/`](js/).
 
 ## What it does in plain terms
 
@@ -34,6 +36,29 @@ thousands of files, but not which class or image grew.
 Obfuscated names can be restored with a ProGuard/R8 `mapping.txt`. Change detection uses a
 semantic fingerprint instead of raw dex bytes, so index-pool reshuffling does not mark unrelated
 classes as modified.
+
+## Continuous APK/Bundle size monitoring in PR CI
+
+The tool is not only for one-off investigations. [`monitor-apk-size-ci/`](monitor-apk-size-ci/)
+contains integrations that compare a baseline APK with the APK produced by a pull request or
+patchset, generate `apkdiff.json` / `apkdiff.html` / `apkdiff.md` plus `size-summary.md`, and fail
+the job when `summary.apk_size_delta` exceeds the threshold (default **500 KB**):
+
+- GitHub Actions: composite action + complete PR workflow;
+- GitLab CI: merge-request pipeline;
+- Gerrit + Jenkins: patchset pipeline with `Verified` voting.
+
+The threshold logic is shared by all three integrations in
+[`scripts/check-size-threshold.py`](monitor-apk-size-ci/scripts/check-size-threshold.py); the full
+contract is documented in
+[`monitor-apk-size-ci/IMPLEMENTATION.md`](monitor-apk-size-ci/IMPLEMENTATION.md).
+
+The monitor compares APK artifacts. Projects that ship an Android App Bundle can extract the APK
+set with `bundletool` and select the APK to monitor; split APKs work the same way.
+
+This repository uses the GitHub integration in
+[`.github/workflows/apk-size-monitor-selftest.yml`](.github/workflows/apk-size-monitor-selftest.yml):
+every PR to `main` compares the bundled complex fixture APKs and enforces the 500 KB gate.
 
 ## Python quick start
 
@@ -70,7 +95,7 @@ See [`py/README.md`](py/README.md) for local development, building wheels and Py
 
 ## CLI options
 
-All three implementations accept the same options:
+All implementations accept the same options:
 
 | Option | Description |
 | --- | --- |
@@ -144,25 +169,7 @@ regenerating, copy it to the other two.
 cd py && python -m unittest discover -s tests -v
 ```
 
-The JVM suite (21 tests) and Node.js suite (23 tests, including a byte-for-byte comparison with
-the Python reports) are documented in [`jvm/README.md`](jvm/README.md) and
-[`js/README.md`](js/README.md).
-
-## APK size CI monitoring
-
-[`monitor-apk-size-ci/`](monitor-apk-size-ci/) contains integrations for business repositories:
-
-- GitHub Actions: composite action + PR workflow;
-- GitLab CI: merge-request pipeline;
-- Gerrit + Jenkins: patchset pipeline with `Verified` voting.
-
-All three compare a baseline APK with the PR / patchset APK, generate
-`apkdiff.json` / `apkdiff.html` / `apkdiff.md` / `size-summary.md`, and fail when
-`apk_size_delta > threshold`. The threshold defaults to **500 KB**. See
-[`monitor-apk-size-ci/IMPLEMENTATION.md`](monitor-apk-size-ci/IMPLEMENTATION.md).
-
-This repository's `.github/workflows/apk-size-monitor-selftest.yml` runs the GitHub flow against
-the fixture APKs for PRs to `main`.
+See the per-implementation READMEs for the JVM and Node.js test commands.
 
 ## Repository layout
 

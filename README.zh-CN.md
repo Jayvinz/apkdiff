@@ -1,19 +1,19 @@
 # apkdiff
 
-APK 包体积 diff 工具。对比两个 APK 版本，按类 / 资源粒度输出新增、删除、修改及各自的体积变化。
+Android APK 包体积 diff 工具。对比两个 APK 版本，把 DEX 字节归属到单个类，逐项对比资源，准确
+输出新增、删除、修改、重命名的条目以及每一项带来的体积变化。
 
 [English](README.md) | 简体中文
 
-仓库包含三套等价实现。本根 README 只使用 **Python** 举例；各实现目录下有各自的详细文档：
+包体积增长很容易在无意间发布出去，发布后却很难解释清楚。apkdiff 把 APK/Bundle 体积对比放进 PR
+流程：同一套比较逻辑在 CI 中运行，生成详细报告，并在 APK 增长超过可配置阈值（默认 **500 KB**）
+时让构建失败。
 
-| 实现 | 语言 | 详细文档 | 包 / 坐标 |
-| --- | --- | --- | --- |
-| [`py/`](py/) | Python 3.7+ | [`py/README.zh-CN.md`](py/README.zh-CN.md) | PyPI：`apkdiff-core` / `apkdiff` |
-| [`jvm/`](jvm/) | Java 11 | [`jvm/README.zh-CN.md`](jvm/README.zh-CN.md) | Maven：`top.jayvin.apkdiff:apkdiff-core` |
-| [`js/`](js/) | Node.js 18+ | [`js/README.zh-CN.md`](js/README.zh-CN.md) | npm：`@jayvinz/apkdiff-core` / `@jayvinz/apkdiff-cli` |
+[`monitor-apk-size-ci/`](monitor-apk-size-ci/) 提供可直接使用的 GitHub Actions、GitLab CI 和
+Gerrit + Jenkins 接入。本仓库每次向 `main` 提 PR 时，都会用内置 fixture APK 跑一遍 GitHub 接入。
 
-三套实现共用同一算法、命令行参数和报告格式。对同一组 fixture APK，生成的 JSON / HTML /
-Markdown 报告**逐字节一致**（LF 换行）。
+仓库包含三套等价实现：Python、Java 11 和 Node.js，共用同一算法、命令行参数和报告格式。本根
+README 使用 Python 举例；各实现的详细文档分别位于 [`py/`](py/)、[`jvm/`](jvm/)、[`js/`](js/)。
 
 ## 它到底在干嘛
 
@@ -27,6 +27,28 @@ Markdown 报告**逐字节一致**（LF 换行）。
 
 提供 ProGuard/R8 `mapping.txt` 时会把混淆类名还原成业务类名。变更判定使用语义指纹，而不是 dex
 原始字节，避免索引池重排导致大面积误报。
+
+## PR CI 中的持续 APK/Bundle 体积监控
+
+这个工具不只用于一次性排查。[`monitor-apk-size-ci/`](monitor-apk-size-ci/) 中的接入会对比基线
+APK 与 PR / patchset 产出的 APK，生成 `apkdiff.json` / `apkdiff.html` / `apkdiff.md` 以及
+`size-summary.md`，并在 `summary.apk_size_delta` 超过阈值（默认 **500 KB**）时让任务失败：
+
+- GitHub Actions：composite action + 完整 PR 工作流；
+- GitLab CI：merge request 流水线；
+- Gerrit + Jenkins：patchset 流水线 + `Verified` 投票。
+
+三种接入共用
+[`scripts/check-size-threshold.py`](monitor-apk-size-ci/scripts/check-size-threshold.py) 的阈值
+逻辑，完整约定见
+[`monitor-apk-size-ci/IMPLEMENTATION.zh-CN.md`](monitor-apk-size-ci/IMPLEMENTATION.zh-CN.md)。
+
+监控对象是 APK 产物。项目若发布 Android App Bundle，可先用 `bundletool` 生成 APK set，再选定
+要监控的 APK；split APK 同理。
+
+本仓库使用
+[`.github/workflows/apk-size-monitor-selftest.yml`](.github/workflows/apk-size-monitor-selftest.yml)
+中的 GitHub 接入：每次 PR 到 `main` 都会对比内置复杂 fixture APK，并执行 500 KB 门禁。
 
 ## Python 快速开始
 
@@ -130,24 +152,7 @@ fixture 在 `py/tests/fixtures`、`jvm/tests/fixtures`、`js/tests/fixtures` 各
 cd py && python -m unittest discover -s tests -v
 ```
 
-JVM（21 个用例）与 Node.js（23 个用例，含与 Python 报告的逐字节比对）的测试命令见
-[`jvm/README.zh-CN.md`](jvm/README.zh-CN.md) 与 [`js/README.zh-CN.md`](js/README.zh-CN.md)。
-
-## APK 体积 CI 监控
-
-[`monitor-apk-size-ci/`](monitor-apk-size-ci/) 提供业务仓库接入示例：
-
-- GitHub Actions：composite action + PR 工作流；
-- GitLab CI：merge request 流水线；
-- Gerrit + Jenkins：patchset 流水线 + `Verified` 投票。
-
-三者都对比基线 APK 与 PR / patchset APK，生成
-`apkdiff.json` / `apkdiff.html` / `apkdiff.md` / `size-summary.md`，并在
-`apk_size_delta > threshold` 时失败。阈值默认 **500 KB**。详见
-[`monitor-apk-size-ci/IMPLEMENTATION.zh-CN.md`](monitor-apk-size-ci/IMPLEMENTATION.zh-CN.md)。
-
-本仓库的 `.github/workflows/apk-size-monitor-selftest.yml` 会在 PR 到 `main` 时对 fixture
-跑一遍 GitHub 流程自测。
+JVM 与 Node.js 的测试命令见各自目录下的 README。
 
 ## 目录结构
 
