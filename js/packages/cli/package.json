@@ -1,0 +1,31 @@
+{
+  "name": "@jayvinz/apkdiff-cli",
+  "version": "1.0.0-alpha01",
+  "description": "Command line APK size diff tool; installs the `apkdiff` executable",
+  "license": "Apache-2.0",
+  "main": "dist/cli.js",
+  "bin": {
+    "apkdiff": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@jayvinz/apkdiff-core": "1.0.0-alpha01"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jayvinz/apkdiff"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

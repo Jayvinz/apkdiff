@@ -1,0 +1,3 @@
+com.example.Alpha -> p.a:
+com.example.Beta -> p.b:
+com.example.Delta -> p.d:

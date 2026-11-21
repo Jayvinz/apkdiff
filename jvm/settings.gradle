@@ -1,0 +1,23 @@
+import org.gradle.api.initialization.resolve.RepositoriesMode
+
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'apkdiff'
+
+// Published library. Coordinates: top.jayvin.apkdiff:apkdiff-core:<apkdiffVersion>
+include ':apkdiff-core'
+
+// CLI application. Produces a standalone executable jar (JVM required at runtime).
+include ':apkdiff-cli'

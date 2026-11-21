@@ -1,0 +1,25 @@
+{
+  "name": "apkdiff-monorepo",
+  "private": true,
+  "version": "1.0.0-alpha01",
+  "description": "APK size diff implementations: Python, JVM (Java 11) and Node.js",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @jayvinz/apkdiff-core && npm run build --workspace @jayvinz/apkdiff-cli",
+    "test": "npm run build && node --test tests/*.test.cjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jayvinz/apkdiff"
+  }
+}

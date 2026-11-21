@@ -1,0 +1,110 @@
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+// Pure Java 11 library: bytecode target 11, built with JDK 17 via --release 11 so that
+// only Java 11 APIs can be referenced.
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    withSourcesJar()
+    // Maven Central requires a javadoc artifact for every publication.
+    withJavadocJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 11
+    options.encoding = 'UTF-8'
+}
+
+// Javadoc defaults to the platform encoding; sources contain Chinese comments and CI runs on
+// Linux while local builds run on Windows, so pin UTF-8 for reproducible jars.
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'com.google.code.gson:gson:2.11.0'
+}
+
+test {
+    useJUnitPlatform()
+    // The APK fixtures live at the repository root and are committed as-is.
+    systemProperty 'apkdiff.fixtures', rootProject.file('tests/fixtures').absolutePath
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+publishing {
+    // Local builds publish here and nowhere else. Production publishing is performed by the
+    // release process (see README) which uploads a signed bundle to Maven Central.
+    repositories {
+        maven {
+            name = 'local'
+            url = layout.projectDirectory.dir('../local-repo').asFile.toURI()
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            // Coordinates: top.jayvin.apkdiff:apkdiff-core:<version>
+            from components.java
+        }
+    }
+
+    // Maven Central requires complete POM metadata for every artifact.
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            name = "apkdiff ${project.name}"
+            description = 'APK size diff: attributes DEX bytes to classes, compares classes ' +
+                    'and resources between two APKs, and renders console / JSON / HTML / Markdown reports'
+            url = 'https://github.com/Jayvinz/apkdiff'
+            licenses {
+                license {
+                    name = 'Apache License 2.0'
+                    url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+            }
+            developers {
+                developer {
+                    id = 'Jayvinz'
+                    name = 'Jayvin'
+                }
+            }
+            scm {
+                url = 'https://github.com/Jayvinz/apkdiff'
+                connection = 'scm:git:git://github.com/Jayvinz/apkdiff.git'
+                developerConnection = 'scm:git:ssh://git@github.com/Jayvinz/apkdiff.git'
+            }
+        }
+    }
+}
+
+// Signing is required by Maven Central and only enabled when the release process provides the
+// key. A local `publish` therefore produces unsigned artifacts in local-repo and cannot release.
+def signingKey = providers.environmentVariable('SIGNING_KEY').orNull
+def hasSigningKey = signingKey != null && !signingKey.trim().isEmpty()
+signing {
+    required = hasSigningKey
+    if (hasSigningKey) {
+        // Gradle registers no signatory when the password is null; an unencrypted key therefore
+        // needs an empty string, not null.
+        useInMemoryPgpKeys(
+                signingKey,
+                providers.environmentVariable('SIGNING_PASSWORD').orNull ?: '')
+    }
+}
+if (hasSigningKey) {
+    signing.sign(publishing.publications.maven)
+}

@@ -1,0 +1,250 @@
+// Jenkins Declarative Pipeline for Gerrit patchsets.
+//
+// Flow:
+//   1. Checkout the Gerrit patchset (SCM refspec configured by Gerrit Trigger).
+//   2. Build the baseline APK from merge-base(HEAD, target branch).
+//   3. Build the patchset APK.
+//   4. Install apkdiff, generate reports, enforce SIZE_THRESHOLD_KB.
+//   5. Archive the report and post a Gerrit Verified vote/message.
+//
+// Prerequisites (see README.md for setup screenshots/steps):
+//   - Jenkins agent labelled `android` with JDK + Android SDK.
+//   - Python 3.9+ and curl on the agent.
+//   - Gerrit Trigger plugin configured for Patchset Created events on the
+//     target branch (usually refs/heads/main).
+//   - The job SCM uses ${GERRIT_REFSPEC} / ${GERRIT_PATCHSET_REVISION}; the
+//     Gerrit Trigger plugin then checks out the patchset into the workspace.
+//
+// The threshold script exits 1 when the APK growth exceeds the configured KB
+// limit. The pipeline then fails and posts Verified -1 to Gerrit. Reports are
+// archived even on failure.
+
+pipeline {
+  agent { label 'android' }
+
+  options {
+    timeout(time: 45, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))
+  }
+
+  parameters {
+    string(
+      name: 'SIZE_THRESHOLD_KB',
+      defaultValue: '500',
+      description: 'Maximum allowed APK growth in KB. Growth above this fails the patchset.'
+    )
+    string(
+      name: 'APKDIFF_REF',
+      defaultValue: 'main',
+      description: 'Jayvinz/apkdiff git ref (tag/SHA recommended for production).'
+    )
+    string(
+      name: 'ANDROID_MODULE',
+      defaultValue: 'app',
+      description: 'Gradle module that produces the APK.'
+    )
+    string(
+      name: 'BUILD_TASK',
+      defaultValue: 'assembleRelease',
+      description: 'Gradle task used to build the APK.'
+    )
+  }
+
+  environment {
+    // Expose parameters to the POSIX shell explicitly (Jenkins also injects
+    // them, but this keeps the contract obvious).
+    SIZE_THRESHOLD_KB = "${params.SIZE_THRESHOLD_KB}"
+    APKDIFF_REF = "${params.APKDIFF_REF}"
+    ANDROID_MODULE = "${params.ANDROID_MODULE}"
+    BUILD_TASK = "${params.BUILD_TASK}"
+
+    // Where to fetch the tool and the shared threshold script.
+    APKDIFF_REPO = 'https://github.com/Jayvinz/apkdiff.git'
+    APKDIFF_RAW = 'https://raw.githubusercontent.com/Jayvinz/apkdiff'
+    REPORT_DIR = 'apkdiff-size-report'
+    ARTIFACT_DIR = 'artifacts'
+    VENV_DIR = '.apkdiff-venv'
+    THRESHOLD_SCRIPT = 'check-size-threshold.py'
+    // Default to fail so a pipeline that dies before the size stage still
+    // posts a negative Gerrit vote.
+    SIZE_PASSED = 'false'
+  }
+
+  stages {
+    // -----------------------------------------------------------------------
+    // Checkout the patchset.
+    // The Gerrit Trigger plugin sets GERRIT_* variables and normally performs
+    // the checkout itself. `checkout scm` keeps the pipeline usable with the
+    // job's Git SCM configuration (refspec ${GERRIT_REFSPEC}).
+    // -----------------------------------------------------------------------
+    stage('Checkout patchset') {
+      steps {
+        checkout scm
+        sh '''
+          set -euo pipefail
+          echo "Gerrit project:  ${GERRIT_PROJECT:-<manual build>}"
+          echo "Gerrit branch:   ${GERRIT_BRANCH:-<unknown>}"
+          echo "Patchset:        ${GERRIT_PATCHSET_NUMBER:-<unknown>}"
+          echo "Revision:        ${GERRIT_PATCHSET_REVISION:-<unknown>}"
+          git rev-parse HEAD
+        '''
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Build the baseline.
+    // merge-base avoids counting unrelated commits that landed on the target
+    // branch after this patchset was created. Change this to a downloaded
+    // release APK if your team keeps a stable baseline artifact.
+    // -----------------------------------------------------------------------
+    stage('Build baseline APK') {
+      steps {
+        sh '''
+          set -euo pipefail
+          branch="${GERRIT_BRANCH:-main}"
+          branch="${branch#refs/heads/}"   # Gerrit may expose refs/heads/main or main
+          git fetch origin "+refs/heads/${branch}:refs/remotes/origin/${branch}"
+          base_sha="$(git merge-base HEAD "origin/${branch}")"
+          echo "Baseline commit: ${base_sha}"
+
+          git worktree remove --force base-src >/dev/null 2>&1 || true
+          rm -rf base-src
+          git worktree add --detach base-src "${base_sha}"
+
+          cd base-src
+          chmod +x gradlew
+          ./gradlew ":${ANDROID_MODULE}:${BUILD_TASK}" --no-daemon
+          cd ..
+
+          mkdir -p "${ARTIFACT_DIR}"
+          apk="$(find "base-src/${ANDROID_MODULE}/build/outputs/apk" -name '*.apk' -print -quit)"
+          test -n "${apk}"
+          cp "${apk}" "${ARTIFACT_DIR}/base.apk"
+
+          mapping="base-src/${ANDROID_MODULE}/build/outputs/mapping/release/mapping.txt"
+          if [ -f "${mapping}" ]; then
+            cp "${mapping}" "${ARTIFACT_DIR}/base-mapping.txt"
+          else
+            : > "${ARTIFACT_DIR}/base-mapping.txt"
+          fi
+        '''
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Build the patchset currently checked out by the Gerrit Trigger.
+    // -----------------------------------------------------------------------
+    stage('Build patchset APK') {
+      steps {
+        sh '''
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew ":${ANDROID_MODULE}:${BUILD_TASK}" --no-daemon
+
+          mkdir -p "${ARTIFACT_DIR}"
+          apk="$(find "${ANDROID_MODULE}/build/outputs/apk" -name '*.apk' -print -quit)"
+          test -n "${apk}"
+          cp "${apk}" "${ARTIFACT_DIR}/head.apk"
+
+          mapping="${ANDROID_MODULE}/build/outputs/mapping/release/mapping.txt"
+          if [ -f "${mapping}" ]; then
+            cp "${mapping}" "${ARTIFACT_DIR}/head-mapping.txt"
+          else
+            : > "${ARTIFACT_DIR}/head-mapping.txt"
+          fi
+        '''
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Compare APKs and enforce the threshold.
+    //
+    // We run the comparison and threshold script in a venv so the Jenkins
+    // agent's Python installation is untouched. The threshold step uses
+    // returnStatus so we can record PASS/FAIL and still let the `post` block
+    // archive the report and review the Gerrit change.
+    // -----------------------------------------------------------------------
+    stage('APK size gate') {
+      steps {
+        script {
+          sh '''
+            set -euo pipefail
+            python3 -m venv "${VENV_DIR}"
+            . "${VENV_DIR}/bin/activate"
+            python -m pip install --upgrade pip
+            python -m pip install "git+${APKDIFF_REPO}@${APKDIFF_REF}#subdirectory=py/packages/core"
+            python -m pip install --no-deps "git+${APKDIFF_REPO}@${APKDIFF_REF}#subdirectory=py/packages/cli"
+            curl -fsSL "${APKDIFF_RAW}/${APKDIFF_REF}/monitor-apk-size-ci/scripts/check-size-threshold.py" -o "${THRESHOLD_SCRIPT}"
+
+            apkdiff "${ARTIFACT_DIR}/base.apk" "${ARTIFACT_DIR}/head.apk" \
+              --old-mapping "${ARTIFACT_DIR}/base-mapping.txt" \
+              --new-mapping "${ARTIFACT_DIR}/head-mapping.txt" \
+              --detect-renames \
+              --format console,json,html,markdown \
+              --metric compressed \
+              -o "${REPORT_DIR}"
+          '''
+
+          def rc = sh(
+            script: '''
+              set +e
+              . "${VENV_DIR}/bin/activate"
+              python "${THRESHOLD_SCRIPT}" \
+                --report "${REPORT_DIR}/apkdiff.json" \
+                --threshold-kb "${SIZE_THRESHOLD_KB}" \
+                --summary "${REPORT_DIR}/size-summary.md"
+              rc=$?
+              cat "${REPORT_DIR}/size-summary.md" 2>/dev/null || true
+              exit $rc
+            ''',
+            returnStatus: true
+          )
+
+          env.SIZE_PASSED = (rc == 0) ? 'true' : 'false'
+          currentBuild.description = "APK size gate: ${env.SIZE_PASSED == 'true' ? 'PASS' : 'FAIL'} (${params.SIZE_THRESHOLD_KB} KB)"
+
+          if (rc != 0) {
+            error("APK size delta exceeded ${params.SIZE_THRESHOLD_KB} KB; see ${REPORT_DIR}/size-summary.md")
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      // Keep the HTML/JSON/Markdown report and the gate summary even on failure.
+      // Add `artifacts/**` here if you also want to retain the built APKs.
+      archiveArtifacts(
+        artifacts: "${REPORT_DIR}/**",
+        allowEmptyArchive: true,
+        fingerprint: true
+      )
+
+      script {
+        if (env.GERRIT_CHANGE_NUMBER && env.GERRIT_PATCHSET_NUMBER) {
+          def summary = fileExists("${REPORT_DIR}/size-summary.md")
+            ? readFile("${REPORT_DIR}/size-summary.md")
+            : "APK size gate did not produce a report. Check the Jenkins build log."
+          def passed = env.SIZE_PASSED == 'true'
+          def message = "APK size gate: ${passed ? 'PASS' : 'FAIL'}\n\n${summary}"
+
+          // Gerrit Trigger plugin step. `Verified` must be permitted for the
+          // Jenkins Gerrit user. If the plugin is not installed, comment this
+          // block out and use `ssh ... gerrit review` instead (see README).
+          try {
+            gerritReview(
+              labels: [Verified: passed ? 1 : -1],
+              message: message
+            )
+          } catch (err) {
+            echo "Gerrit review failed: ${err}"
+          }
+        } else {
+          echo "No Gerrit change context; skipping Gerrit review."
+        }
+      }
+    }
+  }
+}

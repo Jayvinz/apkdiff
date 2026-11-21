@@ -1,0 +1,161 @@
+# APK size gate for GitLab CI.
+#
+# Copy this file to the root of an Android repository as .gitlab-ci.yml, or
+# adapt the three jobs into an existing pipeline. It runs only for merge
+# requests whose target branch is `main`.
+#
+# Pipeline shape:
+#   build:base  -> build target branch, collect artifacts/base.apk
+#   build:head  -> build MR commit, collect artifacts/head.apk
+#   apk-size    -> install apkdiff, compare, enforce SIZE_THRESHOLD_KB, keep report
+#
+# Runner requirements:
+#   - Docker executor
+#   - The Android image must contain a JDK + Android SDK. The example uses
+#     mingc/android-build-box; replace it with your own image if needed.
+#   - The apk-size job uses python:3.12-slim and installs git/curl, apkdiff.
+
+workflow:
+  rules:
+    # Only MR pipelines targeting main. This avoids duplicate branch pipelines.
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+    - when: never
+
+stages:
+  - build
+  - size
+
+variables:
+  # Fetch enough history for git worktree + target branch.
+  GIT_DEPTH: "20"
+  # Shared Gradle cache location (mounted/cached below).
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+  # --- Project-specific configuration -------------------------------------
+  ANDROID_MODULE: "app"                 # Gradle module that produces the APK
+  BUILD_TASK: "assembleRelease"         # e.g. assembleRelease / assembleProductionRelease
+  SIZE_THRESHOLD_KB: "500"              # allowed growth; delta > this fails
+  APKDIFF_REF: "main"                   # pin to a tag/SHA in production
+  APKDIFF_REPO: "https://github.com/Jayvinz/apkdiff.git"
+  APKDIFF_RAW: "https://raw.githubusercontent.com/Jayvinz/apkdiff"
+  APKDIFF_REPORT_DIR: "apkdiff-size-report"
+
+default:
+  interruptible: true
+
+# Common setup for the two Android build jobs.
+.android-build:
+  stage: build
+  image: mingc/android-build-box:latest
+  timeout: 45m
+  cache:
+    # Gradle caches are shared between base/head builds. Build outputs are NOT
+    # cached so a stale APK can never be compared.
+    key: "gradle-$CI_PROJECT_ID"
+    paths:
+      - .gradle/caches
+      - .gradle/wrapper
+    policy: pull-push
+
+# ---------------------------------------------------------------------------
+# Build the target branch APK.
+# ---------------------------------------------------------------------------
+build:base:
+  extends: .android-build
+  script:
+    - |
+      set -euo pipefail
+      target="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+      echo "Building baseline from origin/${target}"
+      git fetch origin "+refs/heads/${target}:refs/remotes/origin/${target}"
+      # Worktree keeps the MR checkout untouched for the head build.
+      git worktree remove --force base-src >/dev/null 2>&1 || true
+      rm -rf base-src
+      git worktree add --detach base-src "origin/${target}"
+      cd base-src
+      chmod +x gradlew
+      ./gradlew ":${ANDROID_MODULE}:${BUILD_TASK}" --no-daemon
+      cd ..
+      mkdir -p artifacts
+      apk="$(find "base-src/${ANDROID_MODULE}/build/outputs/apk" -name '*.apk' -print -quit)"
+      test -n "${apk}"
+      cp "${apk}" artifacts/base.apk
+      mapping="base-src/${ANDROID_MODULE}/build/outputs/mapping/release/mapping.txt"
+      if [ -f "${mapping}" ]; then cp "${mapping}" artifacts/base-mapping.txt; else : > artifacts/base-mapping.txt; fi
+  artifacts:
+    name: "apk-base-$CI_MERGE_REQUEST_IID"
+    paths:
+      - artifacts
+    expire_in: 1 week
+
+# ---------------------------------------------------------------------------
+# Build the APK for the merge request head.
+# ---------------------------------------------------------------------------
+build:head:
+  extends: .android-build
+  script:
+    - |
+      set -euo pipefail
+      chmod +x gradlew
+      ./gradlew ":${ANDROID_MODULE}:${BUILD_TASK}" --no-daemon
+      mkdir -p artifacts
+      apk="$(find "${ANDROID_MODULE}/build/outputs/apk" -name '*.apk' -print -quit)"
+      test -n "${apk}"
+      cp "${apk}" artifacts/head.apk
+      mapping="${ANDROID_MODULE}/build/outputs/mapping/release/mapping.txt"
+      if [ -f "${mapping}" ]; then cp "${mapping}" artifacts/head-mapping.txt; else : > artifacts/head-mapping.txt; fi
+  artifacts:
+    name: "apk-head-$CI_MERGE_REQUEST_IID"
+    paths:
+      - artifacts
+    expire_in: 1 week
+
+# ---------------------------------------------------------------------------
+# Compare the two APKs and enforce the size threshold.
+# This job needs artifacts from both build jobs; GitLab downloads them into
+# artifacts/base.apk and artifacts/head.apk automatically.
+# ---------------------------------------------------------------------------
+apk-size:
+  stage: size
+  image: python:3.12-slim
+  needs:
+    - job: build:base
+      artifacts: true
+    - job: build:head
+      artifacts: true
+  variables:
+    THRESHOLD_SCRIPT: "/tmp/check-size-threshold.py"
+  before_script:
+    # Minimal dependencies for installing apkdiff from GitHub and downloading
+    # the shared threshold script.
+    - apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates
+    - python -m pip install --upgrade pip
+    - python -m pip install "git+${APKDIFF_REPO}@${APKDIFF_REF}#subdirectory=py/packages/core"
+    - python -m pip install --no-deps "git+${APKDIFF_REPO}@${APKDIFF_REF}#subdirectory=py/packages/cli"
+    - curl -fsSL "${APKDIFF_RAW}/${APKDIFF_REF}/monitor-apk-size-ci/scripts/check-size-threshold.py" -o "${THRESHOLD_SCRIPT}"
+  script:
+    - |
+      set -euo pipefail
+      apkdiff artifacts/base.apk artifacts/head.apk \
+        --old-mapping artifacts/base-mapping.txt \
+        --new-mapping artifacts/head-mapping.txt \
+        --detect-renames \
+        --format console,json,html,markdown \
+        --metric compressed \
+        -o "${APKDIFF_REPORT_DIR}"
+    # Exits 1 when delta > SIZE_THRESHOLD_KB, which fails the job.
+    - |
+      python "${THRESHOLD_SCRIPT}" \
+        --report "${APKDIFF_REPORT_DIR}/apkdiff.json" \
+        --threshold-kb "${SIZE_THRESHOLD_KB}" \
+        --summary "${APKDIFF_REPORT_DIR}/size-summary.md"
+  after_script:
+    # Runs even when the threshold check failed; keeps the summary visible in
+    # the job log without hiding the real exit code.
+    - cat "${APKDIFF_REPORT_DIR}/size-summary.md" || true
+  artifacts:
+    when: always
+    name: "apk-size-report-$CI_MERGE_REQUEST_IID"
+    paths:
+      - "${APKDIFF_REPORT_DIR}"
+    expire_in: 2 weeks

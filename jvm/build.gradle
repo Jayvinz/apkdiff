@@ -1,0 +1,5 @@
+// Pure Java project: no Kotlin plugin or Kotlin runtime anywhere.
+allprojects {
+    group = 'top.jayvin.apkdiff'
+    version = providers.gradleProperty('apkdiffVersion').get()
+}

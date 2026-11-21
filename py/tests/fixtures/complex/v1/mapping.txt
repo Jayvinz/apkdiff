@@ -1,0 +1,431 @@
+# compiler: R8
+# compiler_version: 8.2.2-dev
+# {"id":"com.android.tools.r8.mapping","version":"2.2"}
+com.shop.app.ShopApplication -> a.a:
+    1:1:void <init>() -> <init>
+com.shop.ui.MainActivity -> a.b:
+    1:1:void <init>() -> <init>
+com.shop.ui.ProductListActivity -> a.c:
+    1:1:void <init>() -> <init>
+com.shop.ui.ProductDetailActivity -> a.d:
+    1:1:void <init>() -> <init>
+com.shop.ui.CartActivity -> a.e:
+    1:1:void <init>() -> <init>
+com.shop.ui.adapter.ProductAdapter -> b.a:
+    1:1:void <init>() -> <init>
+com.shop.ui.adapter.CartAdapter -> b.b:
+    1:1:void <init>() -> <init>
+com.shop.ui.fragment.HomeFragment -> b.c:
+    1:1:void <init>() -> <init>
+com.shop.ui.fragment.ProfileFragment -> b.d:
+    1:1:void <init>() -> <init>
+com.shop.domain.model.Product -> c.a:
+    1:1:void <init>() -> <init>
+com.shop.domain.model.CartItem -> c.b:
+    1:1:void <init>() -> <init>
+com.shop.domain.model.Order -> c.c:
+    1:1:void <init>() -> <init>
+com.shop.domain.model.OrderStatus -> c.d:
+    1:1:void <init>() -> <init>
+com.shop.domain.usecase.GetProductsUseCase -> c.e:
+    1:1:void <init>() -> <init>
+com.shop.domain.usecase.AddToCartUseCase -> c.f:
+    1:1:void <init>() -> <init>
+com.shop.domain.usecase.CheckoutUseCase -> c.g:
+    1:1:void <init>() -> <init>
+com.shop.domain.repository.ProductRepository -> d.a:
+    1:1:void <init>() -> <init>
+com.shop.domain.repository.CartRepository -> d.b:
+    1:1:void <init>() -> <init>
+com.shop.data.repository.ProductRepositoryImpl -> d.c:
+    1:1:void <init>() -> <init>
+com.shop.data.repository.CartRepositoryImpl -> d.d:
+    1:1:void <init>() -> <init>
+com.shop.data.local.DatabaseHelper -> d.e:
+    1:1:void <init>() -> <init>
+com.shop.data.local.UserDao -> d.f:
+    1:1:void <init>() -> <init>
+com.shop.data.remote.ApiService -> d.g:
+    1:1:void <init>() -> <init>
+com.shop.data.remote.NetworkClient -> d.h:
+    1:1:void <init>() -> <init>
+com.shop.data.remote.dto.ProductDto -> d.i:
+    1:1:void <init>() -> <init>
+com.shop.data.remote.dto.OrderDto -> d.j:
+    1:1:void <init>() -> <init>
+com.shop.util.Logger -> e.a:
+    1:1:void <init>() -> <init>
+com.shop.util.MoneyFormatter -> e.b:
+    1:1:void <init>() -> <init>
+com.shop.util.Validator -> e.c:
+    1:1:void <init>() -> <init>
+com.shop.util.Constants -> e.d:
+    1:1:void <init>() -> <init>
+com.shop.common.Traceable -> e.tr:
+    1:1:void <init>() -> <init>
+com.shop.util.DateTimeUtils -> e.f:
+    1:1:void <init>() -> <init>
+com.shop.util.StringUtils -> e.g:
+    1:1:void <init>() -> <init>
+com.shop.util.CollectionUtils -> e.h:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Repository -> g.a:
+    1:1:void <init>() -> <init>
+com.shop.catalog.RepositoryImpl -> g.b:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Entity -> g.c:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Dto -> g.d:
+    1:1:void <init>() -> <init>
+com.shop.catalog.UseCase -> g.e:
+    1:1:void <init>() -> <init>
+com.shop.catalog.ViewModel -> g.f:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Adapter -> g.g:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Fragment -> g.h:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Utils -> g.i:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Cache -> g.j:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Mapper -> g.k:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Validator -> g.l:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Service -> g.m:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Event -> g.n:
+    1:1:void <init>() -> <init>
+com.shop.catalog.Worker -> g.o:
+    1:1:void <init>() -> <init>
+com.shop.cart.Repository -> h.a:
+    1:1:void <init>() -> <init>
+com.shop.cart.RepositoryImpl -> h.b:
+    1:1:void <init>() -> <init>
+com.shop.cart.Entity -> h.c:
+    1:1:void <init>() -> <init>
+com.shop.cart.Dto -> h.d:
+    1:1:void <init>() -> <init>
+com.shop.cart.UseCase -> h.e:
+    1:1:void <init>() -> <init>
+com.shop.cart.ViewModel -> h.f:
+    1:1:void <init>() -> <init>
+com.shop.cart.Adapter -> h.g:
+    1:1:void <init>() -> <init>
+com.shop.cart.Fragment -> h.h:
+    1:1:void <init>() -> <init>
+com.shop.cart.Utils -> h.i:
+    1:1:void <init>() -> <init>
+com.shop.cart.Cache -> h.j:
+    1:1:void <init>() -> <init>
+com.shop.cart.Mapper -> h.k:
+    1:1:void <init>() -> <init>
+com.shop.cart.Validator -> h.l:
+    1:1:void <init>() -> <init>
+com.shop.cart.Service -> h.m:
+    1:1:void <init>() -> <init>
+com.shop.cart.Event -> h.n:
+    1:1:void <init>() -> <init>
+com.shop.cart.Worker -> h.o:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Repository -> i.a:
+    1:1:void <init>() -> <init>
+com.shop.checkout.RepositoryImpl -> i.b:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Entity -> i.c:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Dto -> i.d:
+    1:1:void <init>() -> <init>
+com.shop.checkout.UseCase -> i.e:
+    1:1:void <init>() -> <init>
+com.shop.checkout.ViewModel -> i.f:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Adapter -> i.g:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Fragment -> i.h:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Utils -> i.i:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Cache -> i.j:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Mapper -> i.k:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Validator -> i.l:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Service -> i.m:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Event -> i.n:
+    1:1:void <init>() -> <init>
+com.shop.checkout.Worker -> i.o:
+    1:1:void <init>() -> <init>
+com.shop.user.Repository -> j.a:
+    1:1:void <init>() -> <init>
+com.shop.user.RepositoryImpl -> j.b:
+    1:1:void <init>() -> <init>
+com.shop.user.Entity -> j.c:
+    1:1:void <init>() -> <init>
+com.shop.user.Dto -> j.d:
+    1:1:void <init>() -> <init>
+com.shop.user.UseCase -> j.e:
+    1:1:void <init>() -> <init>
+com.shop.user.ViewModel -> j.f:
+    1:1:void <init>() -> <init>
+com.shop.user.Adapter -> j.g:
+    1:1:void <init>() -> <init>
+com.shop.user.Fragment -> j.h:
+    1:1:void <init>() -> <init>
+com.shop.user.Utils -> j.i:
+    1:1:void <init>() -> <init>
+com.shop.user.Cache -> j.j:
+    1:1:void <init>() -> <init>
+com.shop.user.Mapper -> j.k:
+    1:1:void <init>() -> <init>
+com.shop.user.Validator -> j.l:
+    1:1:void <init>() -> <init>
+com.shop.user.Service -> j.m:
+    1:1:void <init>() -> <init>
+com.shop.user.Event -> j.n:
+    1:1:void <init>() -> <init>
+com.shop.user.Worker -> j.o:
+    1:1:void <init>() -> <init>
+com.shop.social.Repository -> k.a:
+    1:1:void <init>() -> <init>
+com.shop.social.RepositoryImpl -> k.b:
+    1:1:void <init>() -> <init>
+com.shop.social.Entity -> k.c:
+    1:1:void <init>() -> <init>
+com.shop.social.Dto -> k.d:
+    1:1:void <init>() -> <init>
+com.shop.social.UseCase -> k.e:
+    1:1:void <init>() -> <init>
+com.shop.social.ViewModel -> k.f:
+    1:1:void <init>() -> <init>
+com.shop.social.Adapter -> k.g:
+    1:1:void <init>() -> <init>
+com.shop.social.Fragment -> k.h:
+    1:1:void <init>() -> <init>
+com.shop.social.Utils -> k.i:
+    1:1:void <init>() -> <init>
+com.shop.social.Cache -> k.j:
+    1:1:void <init>() -> <init>
+com.shop.social.Mapper -> k.k:
+    1:1:void <init>() -> <init>
+com.shop.social.Validator -> k.l:
+    1:1:void <init>() -> <init>
+com.shop.social.Service -> k.m:
+    1:1:void <init>() -> <init>
+com.shop.social.Event -> k.n:
+    1:1:void <init>() -> <init>
+com.shop.social.Worker -> k.o:
+    1:1:void <init>() -> <init>
+com.shop.media.Repository -> l.a:
+    1:1:void <init>() -> <init>
+com.shop.media.RepositoryImpl -> l.b:
+    1:1:void <init>() -> <init>
+com.shop.media.Entity -> l.c:
+    1:1:void <init>() -> <init>
+com.shop.media.Dto -> l.d:
+    1:1:void <init>() -> <init>
+com.shop.media.UseCase -> l.e:
+    1:1:void <init>() -> <init>
+com.shop.media.ViewModel -> l.f:
+    1:1:void <init>() -> <init>
+com.shop.media.Adapter -> l.g:
+    1:1:void <init>() -> <init>
+com.shop.media.Fragment -> l.h:
+    1:1:void <init>() -> <init>
+com.shop.media.Utils -> l.i:
+    1:1:void <init>() -> <init>
+com.shop.media.Cache -> l.j:
+    1:1:void <init>() -> <init>
+com.shop.media.Mapper -> l.k:
+    1:1:void <init>() -> <init>
+com.shop.media.Validator -> l.l:
+    1:1:void <init>() -> <init>
+com.shop.media.Service -> l.m:
+    1:1:void <init>() -> <init>
+com.shop.media.Event -> l.n:
+    1:1:void <init>() -> <init>
+com.shop.media.Worker -> l.o:
+    1:1:void <init>() -> <init>
+com.shop.push.Repository -> m.a:
+    1:1:void <init>() -> <init>
+com.shop.push.RepositoryImpl -> m.b:
+    1:1:void <init>() -> <init>
+com.shop.push.Entity -> m.c:
+    1:1:void <init>() -> <init>
+com.shop.push.Dto -> m.d:
+    1:1:void <init>() -> <init>
+com.shop.push.UseCase -> m.e:
+    1:1:void <init>() -> <init>
+com.shop.push.ViewModel -> m.f:
+    1:1:void <init>() -> <init>
+com.shop.push.Adapter -> m.g:
+    1:1:void <init>() -> <init>
+com.shop.push.Fragment -> m.h:
+    1:1:void <init>() -> <init>
+com.shop.push.Utils -> m.i:
+    1:1:void <init>() -> <init>
+com.shop.push.Cache -> m.j:
+    1:1:void <init>() -> <init>
+com.shop.push.Mapper -> m.k:
+    1:1:void <init>() -> <init>
+com.shop.push.Validator -> m.l:
+    1:1:void <init>() -> <init>
+com.shop.push.Service -> m.m:
+    1:1:void <init>() -> <init>
+com.shop.push.Event -> m.n:
+    1:1:void <init>() -> <init>
+com.shop.push.Worker -> m.o:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Repository -> n.a:
+    1:1:void <init>() -> <init>
+com.shop.analytics.RepositoryImpl -> n.b:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Entity -> n.c:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Dto -> n.d:
+    1:1:void <init>() -> <init>
+com.shop.analytics.UseCase -> n.e:
+    1:1:void <init>() -> <init>
+com.shop.analytics.ViewModel -> n.f:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Adapter -> n.g:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Fragment -> n.h:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Utils -> n.i:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Cache -> n.j:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Mapper -> n.k:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Validator -> n.l:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Service -> n.m:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Event -> n.n:
+    1:1:void <init>() -> <init>
+com.shop.analytics.Worker -> n.o:
+    1:1:void <init>() -> <init>
+com.shop.network.Repository -> o.a:
+    1:1:void <init>() -> <init>
+com.shop.network.RepositoryImpl -> o.b:
+    1:1:void <init>() -> <init>
+com.shop.network.Entity -> o.c:
+    1:1:void <init>() -> <init>
+com.shop.network.Dto -> o.d:
+    1:1:void <init>() -> <init>
+com.shop.network.UseCase -> o.e:
+    1:1:void <init>() -> <init>
+com.shop.network.ViewModel -> o.f:
+    1:1:void <init>() -> <init>
+com.shop.network.Adapter -> o.g:
+    1:1:void <init>() -> <init>
+com.shop.network.Fragment -> o.h:
+    1:1:void <init>() -> <init>
+com.shop.network.Utils -> o.i:
+    1:1:void <init>() -> <init>
+com.shop.network.Cache -> o.j:
+    1:1:void <init>() -> <init>
+com.shop.network.Mapper -> o.k:
+    1:1:void <init>() -> <init>
+com.shop.network.Validator -> o.l:
+    1:1:void <init>() -> <init>
+com.shop.network.Service -> o.m:
+    1:1:void <init>() -> <init>
+com.shop.network.Event -> o.n:
+    1:1:void <init>() -> <init>
+com.shop.network.Worker -> o.o:
+    1:1:void <init>() -> <init>
+com.shop.storage.Repository -> p.a:
+    1:1:void <init>() -> <init>
+com.shop.storage.RepositoryImpl -> p.b:
+    1:1:void <init>() -> <init>
+com.shop.storage.Entity -> p.c:
+    1:1:void <init>() -> <init>
+com.shop.storage.Dto -> p.d:
+    1:1:void <init>() -> <init>
+com.shop.storage.UseCase -> p.e:
+    1:1:void <init>() -> <init>
+com.shop.storage.ViewModel -> p.f:
+    1:1:void <init>() -> <init>
+com.shop.storage.Adapter -> p.g:
+    1:1:void <init>() -> <init>
+com.shop.storage.Fragment -> p.h:
+    1:1:void <init>() -> <init>
+com.shop.storage.Utils -> p.i:
+    1:1:void <init>() -> <init>
+com.shop.storage.Cache -> p.j:
+    1:1:void <init>() -> <init>
+com.shop.storage.Mapper -> p.k:
+    1:1:void <init>() -> <init>
+com.shop.storage.Validator -> p.l:
+    1:1:void <init>() -> <init>
+com.shop.storage.Service -> p.m:
+    1:1:void <init>() -> <init>
+com.shop.storage.Event -> p.n:
+    1:1:void <init>() -> <init>
+com.shop.storage.Worker -> p.o:
+    1:1:void <init>() -> <init>
+com.shop.ui.Repository -> q.a:
+    1:1:void <init>() -> <init>
+com.shop.ui.RepositoryImpl -> q.b:
+    1:1:void <init>() -> <init>
+com.shop.ui.Entity -> q.c:
+    1:1:void <init>() -> <init>
+com.shop.ui.Dto -> q.d:
+    1:1:void <init>() -> <init>
+com.shop.ui.UseCase -> q.e:
+    1:1:void <init>() -> <init>
+com.shop.ui.ViewModel -> q.f:
+    1:1:void <init>() -> <init>
+com.shop.ui.Adapter -> q.g:
+    1:1:void <init>() -> <init>
+com.shop.ui.Fragment -> q.h:
+    1:1:void <init>() -> <init>
+com.shop.ui.Utils -> q.i:
+    1:1:void <init>() -> <init>
+com.shop.ui.Cache -> q.j:
+    1:1:void <init>() -> <init>
+com.shop.ui.Mapper -> q.k:
+    1:1:void <init>() -> <init>
+com.shop.ui.Validator -> q.l:
+    1:1:void <init>() -> <init>
+com.shop.ui.Service -> q.m:
+    1:1:void <init>() -> <init>
+com.shop.ui.Event -> q.n:
+    1:1:void <init>() -> <init>
+com.shop.ui.Worker -> q.o:
+    1:1:void <init>() -> <init>
+com.shop.helper.Repository -> r.a:
+    1:1:void <init>() -> <init>
+com.shop.helper.RepositoryImpl -> r.b:
+    1:1:void <init>() -> <init>
+com.shop.helper.Entity -> r.c:
+    1:1:void <init>() -> <init>
+com.shop.helper.Dto -> r.d:
+    1:1:void <init>() -> <init>
+com.shop.helper.UseCase -> r.e:
+    1:1:void <init>() -> <init>
+com.shop.helper.ViewModel -> r.f:
+    1:1:void <init>() -> <init>
+com.shop.helper.Adapter -> r.g:
+    1:1:void <init>() -> <init>
+com.shop.helper.Fragment -> r.h:
+    1:1:void <init>() -> <init>
+com.shop.helper.Utils -> r.i:
+    1:1:void <init>() -> <init>
+com.shop.helper.Cache -> r.j:
+    1:1:void <init>() -> <init>
+com.shop.helper.Mapper -> r.k:
+    1:1:void <init>() -> <init>
+com.shop.helper.Validator -> r.l:
+    1:1:void <init>() -> <init>
+com.shop.helper.Service -> r.m:
+    1:1:void <init>() -> <init>
+com.shop.helper.Event -> r.n:
+    1:1:void <init>() -> <init>
+com.shop.helper.Worker -> r.o:
+    1:1:void <init>() -> <init>

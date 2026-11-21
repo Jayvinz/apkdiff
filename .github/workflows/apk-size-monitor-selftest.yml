@@ -1,0 +1,42 @@
+name: APK size monitor self-test
+
+# Self-test for the local GitHub action. It compares the bundled complex fixture
+# APKs so that the monitor wiring runs on this repository's PRs too.
+# Real Android projects should copy monitor-apk-size-ci/github/example-pull-request.yml.
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk-size-selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk-size:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare fixture APKs (500 KB gate)
+        id: size
+        uses: ./monitor-apk-size-ci/github
+        with:
+          old-apk: js/tests/fixtures/complex/v1/v1.apk
+          new-apk: js/tests/fixtures/complex/v2/v2.apk
+          old-mapping: js/tests/fixtures/complex/v1/mapping.txt
+          new-mapping: js/tests/fixtures/complex/v2/mapping.txt
+          threshold-kb: 500
+          tool-path: .
+          artifact-name: apk-size-selftest-report
+
+      - name: Show result
+        run: |
+          echo "APK delta: ${{ steps.size.outputs.delta-kb }} KB"
+          echo "Threshold: ${{ steps.size.outputs.threshold-bytes }} bytes"
+          echo "Passed: ${{ steps.size.outputs.passed }}"

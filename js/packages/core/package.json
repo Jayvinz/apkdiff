@@ -1,0 +1,26 @@
+{
+  "name": "@jayvinz/apkdiff-core",
+  "version": "1.0.0-alpha01",
+  "description": "APK size diff: attributes DEX bytes to classes, compares classes and resources between two APKs, and renders console / JSON / HTML / Markdown reports",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jayvinz/apkdiff"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

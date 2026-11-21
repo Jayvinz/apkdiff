@@ -1,0 +1,163 @@
+# Composite action: APK size gate for GitHub Actions.
+#
+# Contract:
+#   1. Caller supplies two APK paths (baseline + PR head) and optional mappings.
+#   2. The action installs apkdiff and writes JSON/HTML/Markdown reports.
+#   3. check-size-threshold.py compares summary.apk_size_delta with
+#      threshold-kb * 1024 and fails the step when the APK grew too much.
+#   4. The report directory is uploaded as an artifact even on failure.
+#
+# Consumers can either copy the complete example workflow
+# (example-pull-request.yml) or call this action after their own build/download
+# steps. See README.md for inputs, outputs and baseline strategies.
+name: APK Size Monitor
+description: Compare two APKs, generate an apkdiff report, and fail when the PR APK grows beyond a threshold.
+
+inputs:
+  old-apk:
+    description: Path to the baseline APK (relative to the caller workspace).
+    required: true
+  new-apk:
+    description: Path to the PR/head APK (relative to the caller workspace).
+    required: true
+  old-mapping:
+    description: Optional ProGuard/R8 mapping.txt for the baseline APK.
+    required: false
+    default: ""
+  new-mapping:
+    description: Optional ProGuard/R8 mapping.txt for the PR APK.
+    required: false
+    default: ""
+  threshold-kb:
+    description: Maximum allowed APK growth in KB. Growth above this fails the job.
+    required: false
+    default: "500"
+  metric:
+    description: Size metric used for sorting/deltas (compressed or uncompressed).
+    required: false
+    default: "compressed"
+  detect-renames:
+    description: Detect renamed resources with identical content.
+    required: false
+    default: "true"
+  output-dir:
+    description: Directory where apkdiff writes its reports.
+    required: false
+    default: "apkdiff-size-report"
+  artifact-name:
+    description: Name of the uploaded report artifact.
+    required: false
+    default: "apk-size-report"
+  tool-path:
+    description: Local apkdiff source checkout. Leave empty to install from tool-ref.
+    required: false
+    default: ""
+  tool-ref:
+    description: Git ref of Jayvinz/apkdiff used when tool-path is empty.
+    required: false
+    default: "main"
+  python-version:
+    description: Python version used to run apkdiff.
+    required: false
+    default: "3.12"
+
+outputs:
+  delta-bytes:
+    description: Signed APK size delta in bytes.
+    value: ${{ steps.check.outputs.delta-bytes }}
+  delta-kb:
+    description: Signed APK size delta in KB.
+    value: ${{ steps.check.outputs.delta-kb }}
+  threshold-bytes:
+    description: Threshold in bytes.
+    value: ${{ steps.check.outputs.threshold-bytes }}
+  passed:
+    description: "true when the APK delta is within the threshold."
+    value: ${{ steps.check.outputs.passed }}
+  report-dir:
+    description: Directory containing apkdiff.json/html/md and size-summary.md.
+    value: ${{ inputs.output-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install apkdiff
+      shell: bash
+      env:
+        TOOL_PATH: ${{ inputs.tool-path }}
+        TOOL_REF: ${{ inputs.tool-ref }}
+      run: |
+        set -euo pipefail
+        python -m pip install --upgrade pip
+        if [ -n "${TOOL_PATH}" ]; then
+          python -m pip install "${TOOL_PATH}/py/packages/core"
+          python -m pip install --no-deps "${TOOL_PATH}/py/packages/cli"
+        else
+          python -m pip install "git+https://github.com/Jayvinz/apkdiff.git@${TOOL_REF}#subdirectory=py/packages/core"
+          python -m pip install --no-deps "git+https://github.com/Jayvinz/apkdiff.git@${TOOL_REF}#subdirectory=py/packages/cli"
+        fi
+        apkdiff --help >/dev/null
+
+    - name: Compare APKs and generate report
+      shell: bash
+      env:
+        OLD_APK: ${{ inputs.old-apk }}
+        NEW_APK: ${{ inputs.new-apk }}
+        OLD_MAPPING: ${{ inputs.old-mapping }}
+        NEW_MAPPING: ${{ inputs.new-mapping }}
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+        METRIC: ${{ inputs.metric }}
+        DETECT_RENAMES: ${{ inputs.detect-renames }}
+      run: |
+        set -euo pipefail
+        args=(--format console,json,html,markdown --metric "${METRIC}" -o "${OUTPUT_DIR}")
+        if [ -n "${OLD_MAPPING}" ]; then
+          args+=(--old-mapping "${OLD_MAPPING}")
+        fi
+        if [ -n "${NEW_MAPPING}" ]; then
+          args+=(--new-mapping "${NEW_MAPPING}")
+        fi
+        if [ "${DETECT_RENAMES}" = "true" ]; then
+          args+=(--detect-renames)
+        fi
+        apkdiff "${OLD_APK}" "${NEW_APK}" "${args[@]}"
+
+    - name: Enforce APK size threshold
+      id: check
+      shell: bash
+      env:
+        REPORT: ${{ inputs.output-dir }}/apkdiff.json
+        THRESHOLD_KB: ${{ inputs.threshold-kb }}
+        SUMMARY: ${{ inputs.output-dir }}/size-summary.md
+        TOOL_REF: ${{ inputs.tool-ref }}
+      run: |
+        set -euo pipefail
+        # The threshold script is shared by all CI cases. When this action is
+        # fetched from another repository, GitHub checks out the whole tool repo
+        # so the sibling scripts/ directory is available. Fall back to raw GitHub
+        # only if a runner/vendor strips files outside the action directory.
+        script="${GITHUB_ACTION_PATH}/../scripts/check-size-threshold.py"
+        if [ ! -f "${script}" ]; then
+          script="${RUNNER_TEMP}/check-size-threshold.py"
+          curl -fsSL \
+            "https://raw.githubusercontent.com/Jayvinz/apkdiff/${TOOL_REF}/monitor-apk-size-ci/scripts/check-size-threshold.py" \
+            -o "${script}"
+        fi
+        python "${script}" \
+          --report "${REPORT}" \
+          --threshold-kb "${THRESHOLD_KB}" \
+          --summary "${SUMMARY}" \
+          --github-output "${GITHUB_OUTPUT}"
+
+    - name: Upload APK size report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-dir }}
+        if-no-files-found: warn

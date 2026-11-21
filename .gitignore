@@ -1,0 +1,139 @@
+# 默认忽略所有文件，下面用 ! 逐项“放行”真正需要进仓库的东西。
+# 构建产物（build/、.gradle/、node_modules/、dist/、local-repo/、*.tgz、
+# __pycache__ 等）都不会被放行。
+*
+!*/
+
+# 根文档 / 忽略规则本身
+!/README.md
+!/README.zh-CN.md
+!/CLAUDE.md
+!.gitignore
+
+# ---------------------------------------------------------------------------
+# Python 实现（两个 PyPI 包：apkdiff-core / apkdiff）
+# ---------------------------------------------------------------------------
+!py/
+!py/README.md
+!py/README.zh-CN.md
+!py/packages/
+!py/packages/core/
+!py/packages/core/pyproject.toml
+!py/packages/core/README.md
+!py/packages/core/README.zh-CN.md
+!py/packages/core/src/
+!py/packages/core/src/**/*.py
+
+!py/packages/cli/
+!py/packages/cli/pyproject.toml
+!py/packages/cli/README.md
+!py/packages/cli/README.zh-CN.md
+!py/packages/cli/src/
+!py/packages/cli/src/**/*.py
+
+!py/tests/
+!py/tests/*.py
+!py/tests/*.md
+!py/tests/fixtures/
+!py/tests/fixtures/**/*.apk
+!py/tests/fixtures/**/mapping.txt
+!py/tests/fixtures/complex/expected.json
+
+!py/report-complex/
+!py/report-complex/*
+
+# ---------------------------------------------------------------------------
+# JVM 实现
+# ---------------------------------------------------------------------------
+!jvm/
+!jvm/README.md
+!jvm/README.zh-CN.md
+!jvm/settings.gradle
+!jvm/build.gradle
+!jvm/gradle.properties
+!jvm/gradlew
+!jvm/gradlew.bat
+
+!jvm/gradle/
+!jvm/gradle/wrapper/
+!jvm/gradle/wrapper/gradle-wrapper.jar
+!jvm/gradle/wrapper/gradle-wrapper.properties
+
+!jvm/apkdiff-core/
+!jvm/apkdiff-core/build.gradle
+!jvm/apkdiff-core/src/
+!jvm/apkdiff-core/src/**/*.java
+!jvm/apkdiff-core/src/main/resources/
+!jvm/apkdiff-core/src/main/resources/**/*.html
+
+!jvm/apkdiff-cli/
+!jvm/apkdiff-cli/build.gradle
+!jvm/apkdiff-cli/src/
+!jvm/apkdiff-cli/src/**/*.java
+
+!jvm/tests/
+!jvm/tests/fixtures/
+!jvm/tests/fixtures/**/*.apk
+!jvm/tests/fixtures/**/mapping.txt
+!jvm/tests/fixtures/complex/expected.json
+
+# ---------------------------------------------------------------------------
+# Node.js 实现（npm workspaces）
+# ---------------------------------------------------------------------------
+!js/
+!js/README.md
+!js/README.zh-CN.md
+!js/package.json
+!js/package-lock.json
+!js/tsconfig.base.json
+
+!js/packages/
+!js/packages/core/
+!js/packages/core/package.json
+!js/packages/core/tsconfig.json
+!js/packages/core/README.md
+!js/packages/core/README.zh-CN.md
+!js/packages/core/src/
+!js/packages/core/src/**/*.ts
+
+!js/packages/cli/
+!js/packages/cli/package.json
+!js/packages/cli/tsconfig.json
+!js/packages/cli/README.md
+!js/packages/cli/README.zh-CN.md
+!js/packages/cli/src/
+!js/packages/cli/src/**/*.ts
+
+!js/tests/
+!js/tests/*.cjs
+!js/tests/fixtures/
+!js/tests/fixtures/**/*.apk
+!js/tests/fixtures/**/mapping.txt
+!js/tests/fixtures/complex/expected.json
+
+# CI 配置
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
+
+# APK 体积 CI 监控 case
+!monitor-apk-size-ci/
+!monitor-apk-size-ci/README.md
+!monitor-apk-size-ci/README.zh-CN.md
+!monitor-apk-size-ci/IMPLEMENTATION.md
+!monitor-apk-size-ci/IMPLEMENTATION.zh-CN.md
+!monitor-apk-size-ci/scripts/
+!monitor-apk-size-ci/scripts/*.py
+!monitor-apk-size-ci/github/
+!monitor-apk-size-ci/github/README.md
+!monitor-apk-size-ci/github/README.zh-CN.md
+!monitor-apk-size-ci/github/action.yml
+!monitor-apk-size-ci/github/example-pull-request.yml
+!monitor-apk-size-ci/gitlab/
+!monitor-apk-size-ci/gitlab/README.md
+!monitor-apk-size-ci/gitlab/README.zh-CN.md
+!monitor-apk-size-ci/gitlab/.gitlab-ci.yml
+!monitor-apk-size-ci/gerrit-jenkins/
+!monitor-apk-size-ci/gerrit-jenkins/README.md
+!monitor-apk-size-ci/gerrit-jenkins/README.zh-CN.md
+!monitor-apk-size-ci/gerrit-jenkins/Jenkinsfile

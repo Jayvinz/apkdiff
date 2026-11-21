@@ -1,0 +1,72 @@
+import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+plugins {
+    id 'application'
+}
+
+application {
+    mainClass = 'top.jayvin.apkdiff.cli.Main'
+    applicationName = 'apkdiff'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 11
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    implementation project(':apkdiff-core')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'com.google.code.gson:gson:2.11.0'
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'apkdiff.fixtures', rootProject.file('tests/fixtures').absolutePath
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+/**
+ * Self-contained executable jar: every runtime dependency is merged in, so a single
+ * `apkdiff-cli-<version>-all.jar` runs on Windows / macOS / Linux with `java -jar`.
+ * No JRE is bundled — the target machine needs a Java 11+ runtime.
+ */
+def fatJar = tasks.register('fatJar', Jar) {
+    group = 'build'
+    description = 'Builds the standalone executable jar (requires a Java 11+ runtime).'
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+                'Main-Class': 'top.jayvin.apkdiff.cli.Main',
+                'Implementation-Title': 'apkdiff',
+                'Implementation-Version': project.version)
+    }
+
+    from sourceSets.main.output
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.findAll { it.name.endsWith('.jar') }.collect { zipTree(it) }
+    }
+
+    // Dependency jars may carry their own signatures; keeping them would break the merged
+    // jar's signature verification.
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/MANIFEST.MF'
+}
+
+tasks.named('build') {
+    dependsOn fatJar
+}

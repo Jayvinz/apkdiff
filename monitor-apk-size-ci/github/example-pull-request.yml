@@ -1,0 +1,138 @@
+# Complete GitHub Actions example for an Android repository.
+#
+# Copy this file to .github/workflows/apk-size.yml.
+#
+# Flow:
+#   build-base -> checkout PR base SHA, build APK, upload artifact
+#   build-head -> checkout PR merge commit, build APK, upload artifact
+#   apk-size   -> download both artifacts, call the composite action
+#
+# The action fails the job when summary.apk_size_delta exceeds
+# SIZE_THRESHOLD_KB (default 500 KB). Reports are uploaded even on failure.
+#
+# Adjust ANDROID_MODULE / BUILD_TASK / APK output paths for your project.
+# If you already have baseline and PR APKs from another job or a release,
+# remove the two build jobs and pass their paths to the action directly.
+name: APK size gate
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk-size-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  ANDROID_MODULE: app
+  BUILD_TASK: assembleRelease
+  SIZE_THRESHOLD_KB: 500
+  APKDIFF_TOOL_REF: main
+
+jobs:
+  build-base:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base-src
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build base APK
+        working-directory: base-src
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew ":${ANDROID_MODULE}:${BUILD_TASK}" --no-daemon
+
+      - name: Collect base APK
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          apk="$(find "base-src/${ANDROID_MODULE}/build/outputs/apk" -name '*.apk' -print -quit)"
+          test -n "${apk}"
+          cp "${apk}" dist/base.apk
+          mapping="base-src/${ANDROID_MODULE}/build/outputs/mapping/release/mapping.txt"
+          if [ -f "${mapping}" ]; then cp "${mapping}" dist/base-mapping.txt; else : > dist/base-mapping.txt; fi
+
+      - name: Upload base APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-base
+          path: dist
+          if-no-files-found: error
+
+  build-head:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          path: head-src
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build PR APK
+        working-directory: head-src
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew ":${ANDROID_MODULE}:${BUILD_TASK}" --no-daemon
+
+      - name: Collect PR APK
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          apk="$(find "head-src/${ANDROID_MODULE}/build/outputs/apk" -name '*.apk' -print -quit)"
+          test -n "${apk}"
+          cp "${apk}" dist/head.apk
+          mapping="head-src/${ANDROID_MODULE}/build/outputs/mapping/release/mapping.txt"
+          if [ -f "${mapping}" ]; then cp "${mapping}" dist/head-mapping.txt; else : > dist/head-mapping.txt; fi
+
+      - name: Upload PR APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-head
+          path: dist
+          if-no-files-found: error
+
+  apk-size:
+    needs: [ build-base, build-head ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download base APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-base
+          path: artifacts/base
+
+      - name: Download PR APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-head
+          path: artifacts/head
+
+      - name: Compare APK size
+        uses: Jayvinz/apkdiff/monitor-apk-size-ci/github@main
+        with:
+          old-apk: artifacts/base/base.apk
+          new-apk: artifacts/head/head.apk
+          old-mapping: artifacts/base/base-mapping.txt
+          new-mapping: artifacts/head/head-mapping.txt
+          threshold-kb: ${{ env.SIZE_THRESHOLD_KB }}
+          artifact-name: apk-size-report-pr-${{ github.event.pull_request.number || github.run_id }}
+          tool-ref: ${{ env.APKDIFF_TOOL_REF }}
