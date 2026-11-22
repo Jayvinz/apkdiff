@@ -60,6 +60,8 @@ jobs:
     needs: plan
     if: needs.plan.outputs.py == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # attach the distribution files to the GitHub Release
     steps:
       - uses: actions/checkout@v4
 
@@ -115,7 +117,31 @@ jobs:
           python -m build py/packages/cli
           python -m twine check py/packages/core/dist/* py/packages/cli/dist/*
 
+      - name: Attach Python distributions to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            py/packages/core/dist/*
+            py/packages/cli/dist/*
+          fail_on_unmatched_files: true
+
+      - name: Check PyPI version
+        id: pypi
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          exists=false
+          for project in apkdiff apkdiff-core; do
+            if curl -fsS --max-time 20 "https://pypi.org/pypi/$project/$VERSION/json" >/dev/null; then
+              exists=true
+              echo "PyPI $project $VERSION already exists"
+            fi
+          done
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+
       - name: Upload to PyPI
+        if: steps.pypi.outputs.exists != 'true'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
@@ -167,9 +193,23 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
         run: bash ./gradlew :apkdiff-cli:fatJar -PapkdiffVersion="$VERSION"
 
+      - name: Check Maven Central version
+        id: central
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          if curl -fsS --max-time 20 \
+            "https://repo1.maven.org/maven2/top/jayvin/apkdiff/apkdiff-core/$VERSION/apkdiff-core-$VERSION.pom" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Maven Central $VERSION already exists; skipping publication"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # Maven-publish writes to java/local-repo; the build itself has no remote repository.
       # SIGNING_KEY enables signing, which Central requires for every artifact.
       - name: Publish signed artifacts to local repository
+        if: steps.central.outputs.exists != 'true'
         working-directory: java
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -180,6 +220,7 @@ jobs:
       # Central requires md5 + sha1 for every file, so keep the checksums the local
       # publication generated; only stale repository metadata has to go.
       - name: Bundle the Maven Central artifacts
+        if: steps.central.outputs.exists != 'true'
         working-directory: java
         run: |
           mkdir -p build/central-bundle/top/jayvin/apkdiff
@@ -188,6 +229,7 @@ jobs:
           (cd build/central-bundle && zip -qr ../central-bundle.zip top)
 
       - name: Upload the bundle to Maven Central
+        if: steps.central.outputs.exists != 'true'
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
@@ -232,7 +274,7 @@ jobs:
     if: needs.plan.outputs.js == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # attach the npm tarballs to the GitHub Release
       id-token: write # npm provenance
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # only a real npm_* token enables publishing
@@ -274,3 +316,17 @@ jobs:
       - name: Skip npm publish
         if: ${{ !startsWith(env.NODE_AUTH_TOKEN, 'npm_') }}
         run: echo "NPM_TOKEN is empty or not an npm token; skipping npm publish."
+
+      - name: Pack npm tarballs
+        working-directory: js
+        run: |
+          mkdir -p release-assets
+          npm pack --workspace @jayvinz/apkdiff-core --pack-destination release-assets
+          npm pack --workspace @jayvinz/apkdiff-cli --pack-destination release-assets
+
+      - name: Attach npm tarballs to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: js/release-assets/*.tgz
+          fail_on_unmatched_files: true

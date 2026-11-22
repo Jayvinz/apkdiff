@@ -173,7 +173,9 @@ Maven Central, `js-v*` only npm, and a bare `v*` publishes all three. The tag ve
 into each module during CI, so checked-in versions may lag behind the latest release. Required
 repository secrets: `PYPI_API_TOKEN`, `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_KEY`,
 `SIGNING_PASSWORD`. `NPM_TOKEN` is optional: the npm publish step runs only when it starts with
-`npm_`; any other value skips publishing (JS build/tests still run).
+`npm_`; any other value skips publishing (JS build/tests still run). Releases attach Python
+sdists/wheels, npm tarballs and the Java CLI fat jar; PyPI and Maven Central publication is
+idempotent when a tag is re-run.
 
 ### Fixtures and parity
 

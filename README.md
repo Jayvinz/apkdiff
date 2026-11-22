@@ -206,6 +206,9 @@ See [`.github/workflows/publish.yml`](.github/workflows/publish.yml). Required r
 `SIGNING_KEY` (ASCII-armored key) and `SIGNING_PASSWORD` (optional for an unencrypted key).
 `NPM_TOKEN` is optional: publishing runs only when it is a real npm token (starts with `npm_`);
 an empty or invalid value skips npm publishing while the JS build and tests still run.
+Every tagged release attaches the Python sdists/wheels, npm tarballs (even when publishing is
+skipped), and the Java CLI fat jar to the GitHub Release. Re-running a tag is safe: already
+published PyPI / Maven Central versions are detected and skipped.
 
 ## License
 

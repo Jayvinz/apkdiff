@@ -180,12 +180,14 @@ monitor-apk-size-ci/   GitHub / GitLab / Gerrit+Jenkins 体积门禁接入
 | `py-v1.0.0` | PyPI：`apkdiff-core`，然后 `apkdiff` |
 | `java-v1.0.0` | Maven Central：`top.jayvin.apkdiff:apkdiff-core`，并把独立 CLI jar 作为 GitHub Release 附件 |
 | `js-v1.0.0` | npm：`@jayvinz/apkdiff-core`，然后 `@jayvinz/apkdiff-cli`（`NPM_TOKEN` 为空时跳过） |
-| `v1.0.0` | 三种实现全部发布（`NPM_TOKEN` 为空时跳过 npm） |
+| `v1.0.0` | 三种实现全部发布（无真实 npm token 时跳过 npm） |
 
 见 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)。需要在仓库中配置这些 secret：
 `PYPI_API_TOKEN`、`SONATYPE_USERNAME`、`SONATYPE_PASSWORD`（Central Portal publishing token）、
 `SIGNING_KEY`（ASCII-armored 签名私钥）和 `SIGNING_PASSWORD`（私钥无口令时可留空）。
 `NPM_TOKEN` 可选：只有填入真实 npm token（以 `npm_` 开头）才会发布；空串或无效值都会跳过 npm 发布，JS 的构建和测试仍会执行。
+每个 tag 发布都会把 Python 的 sdist/wheel、npm tarball（即使跳过发布也会打包）和 Java CLI fat jar 附到 GitHub Release。
+重复跑同一个 tag 是安全的：已发布的 PyPI / Maven Central 版本会被检测并跳过。
 
 ## 许可
 
