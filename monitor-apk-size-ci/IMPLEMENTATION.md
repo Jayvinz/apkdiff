@@ -128,7 +128,7 @@ python -m pip install --no-deps "git+https://github.com/Jayvinz/apkdiff.git@${AP
 - Once PyPI packages are published, this can become:
 
   ```bash
-  python -m pip install "apkdiff==1.0.0a1"
+  python -m pip install "apkdiff==1.0.0"
   ```
 
 ## 6. Reports and artifacts

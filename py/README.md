@@ -109,8 +109,13 @@ python -m build packages/cli
 twine upload packages/core/dist/* packages/cli/dist/*   # requires a PyPI token
 ```
 
-Both packages use version `1.0.0a1`; `apkdiff` depends on `apkdiff-core==1.0.0a1`.
+Both packages use version `1.0.0`; `apkdiff` depends on `apkdiff-core==1.0.0`.
 `pip install apkdiff` has been verified from a local wheel index.
+
+Release CI publishes to PyPI on a `py-v<version>` tag (Python only) or a bare `v<version>` tag
+(all three implementations). The tag supplies the version and CI stamps it into both
+`__version__` fields and the `apkdiff-core` dependency pin; no source version bump is needed.
+The workflow needs the `PYPI_API_TOKEN` repository secret.
 
 ## Layout
 

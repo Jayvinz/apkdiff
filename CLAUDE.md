@@ -9,7 +9,7 @@ resources, and renders console / JSON / HTML / Markdown reports. It contains **t
 implementations of the same tool**:
 
 - `py/` — Python 3.7+; two PyPI packages: `apkdiff-core` (import `apkdiff_core`) and `apkdiff` (CLI).
-- `jvm/` — pure Java 11; Maven library `top.jayvin.apkdiff:apkdiff-core` and a standalone CLI jar.
+- `java/` — pure Java 11; Maven library `top.jayvin.apkdiff:apkdiff-core` and a standalone CLI jar.
 - `js/` — Node.js 18+; npm packages `@jayvinz/apkdiff-core` and `@jayvinz/apkdiff-cli`.
 
 All three are intended to produce **byte-identical reports** for the same APK pair. The
@@ -56,17 +56,17 @@ python -m build packages/cli
 Tests import the installed `apkdiff_core` / `apkdiff` packages. Without installing, set
 `PYTHONPATH=packages/core/src:packages/cli/src` (use `;` on Windows).
 
-### JVM
+### Java
 
 ```bash
-cd jvm
+cd java
 ./gradlew build
 ./gradlew test
 ./gradlew :apkdiff-core:test --tests 'top.jayvin.apkdiff.SmallFixtureTest'
 ./gradlew :apkdiff-core:test --tests 'top.jayvin.apkdiff.SmallFixtureTest.classChanges'
 
 java -jar apkdiff-cli/build/libs/apkdiff-cli-1.0.0-alpha01-all.jar old.apk new.apk ...
-./gradlew :apkdiff-core:publish       # writes jvm/local-repo/
+./gradlew :apkdiff-core:publishToMavenLocal  # writes ~/.m2/repository
 ```
 
 The `--tests` filter must be scoped to a module; an unscoped `./gradlew test --tests ...` fails
@@ -133,19 +133,26 @@ to each class's uncompressed attributed bytes.
 - `packages/core/src/apkdiff_core/`: `dex.py`, `apk.py`, `mapping.py`, `diff.py`, `report.py`,
   `util.py`; public exports and `__version__` live in `__init__.py`.
 - `packages/cli/src/apkdiff/`: CLI only; `__main__.py` enables `python -m apkdiff`.
-- Packaging uses setuptools (`>=61`), `src` layout, `requires-python >=3.7`. Core version is
-  dynamic from `apkdiff_core.__version__`; the CLI pins `apkdiff-core==1.0.0a1`.
+- Packaging uses setuptools (`>=77` for SPDX `license`), `src` layout, `requires-python >=3.7`.
+  Building from sdist needs Python >=3.9 (setuptools 77 requirement); wheels are `py3-none-any`.
+  Core version is dynamic from `apkdiff_core.__version__`; the CLI pins `apkdiff-core==1.0.0`.
+- Root `LICENSE` (Apache-2.0) covers `py/`, `java/` and `js/`. The two `py/packages/*/LICENSE`
+  files are byte-identical copies needed by setuptools (it cannot reference files outside the
+  package dir via `license-files`); keep all three in sync.
 - Python code must remain 3.7-runtime compatible: `from __future__ import annotations` is used,
   but runtime APIs newer than 3.7 are not. It uses only the standard library.
 - `py/report-complex/` holds the canonical example reports (LF endings).
 
-### JVM (`jvm/`)
+### Java (`java/`)
 
 - `apkdiff-core`: no dependencies; `javac --release 11`/Kotlin-free Java. Main classes mirror the
   Python modules: `DexFile`, `ApkAnalyzer`, `Differ`, `Reporter`, `Mapping`, `ApkDiff` facade.
 - `apkdiff-cli`: `Main` plus a `fatJar` task; the `-all.jar` is a standalone executable.
-- Gradle build scripts are Groovy DSL. `jvm/gradle.properties` `apkdiffVersion` is the single
-  version source. Publishing signs only when `SIGNING_KEY` is set and writes to `jvm/local-repo`.
+- Gradle build scripts are Groovy DSL. `java/gradle.properties` `apkdiffVersion` is the local
+  version; release CI overrides it with `-PapkdiffVersion=<tag version>`. The `apkdiff-core`
+  module uses plain `maven-publish` + `signing`: a local `publish` writes unsigned artifacts to
+  `java/local-repo`, and release CI bundles that repo and uploads it to Maven Central (Central
+  Portal) via the publisher API. `publishToMavenLocal` still writes to `~/.m2/repository`.
 - `Reporter` embeds `report-template.html`; JSON is produced by the custom `JsonWriter`, not a
   third-party JSON library.
 
@@ -159,10 +166,19 @@ to each class's uncompressed attributed bytes.
 - `template.ts` embeds the HTML report exactly; do not reformat it.
 - The CLI supports both `node dist/cli.js` and the installed `apkdiff` bin.
 
+### Releases
+
+`.github/workflows/publish.yml` routes on tag: `py-v*` publishes only PyPI, `java-v*` only
+Maven Central, `js-v*` only npm, and a bare `v*` publishes all three. The tag version is stamped
+into each module during CI, so checked-in versions may lag behind the latest release. Required
+repository secrets: `PYPI_API_TOKEN`, `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_KEY`,
+`SIGNING_PASSWORD`. `NPM_TOKEN` is optional: an empty value skips only the npm publish step (JS
+build/tests still run).
+
 ### Fixtures and parity
 
 - The Python fixtures under `py/tests/fixtures/` are the generation source. Copies live in
-  `jvm/tests/fixtures/` and `js/tests/fixtures/` so each language folder is self-contained.
+  `java/tests/fixtures/` and `js/tests/fixtures/` so each language folder is self-contained.
 - After regenerating fixtures, re-copy them to both other directories.
 - The JS test `cli.test.cjs` compares generated JSON/HTML/Markdown against
   `py/report-complex/` byte-for-byte. When changing report behavior, regenerate canonical reports
@@ -187,8 +203,9 @@ to each class's uncompressed attributed bytes.
   `*.egg-info`, `__pycache__`, Gradle caches and `.venv` stay ignored.
 - Java must stay dependency-free, Java 11 bytecode and Java 11 API compatible (`options.release = 11`).
   Python must stay dependency-free and 3.7+ compatible. JS must stay dependency-free at runtime.
-- Keep package versions aligned conceptually: JVM/npm `1.0.0-alpha01`, Python PEP 440 `1.0.0a1`.
-  Git tags/refs used by CI should be pinned in production.
+- Release versions come from git tags at CI time (`py-v*`, `java-v*`, `js-v*`, `v*`); the
+  checked-in `1.0.0` / `1.0.0-alpha01` values are local defaults only. Git tags/refs used by CI
+  should be pinned in production.
 - Fixtures are duplicated intentionally; do not edit only one copy.
 - Reports use LF on all platforms. Do not use platform-default newline translation.
 - The contract for `--metric` is `compressed` by default; `sizeFor`/`oldFor`/`newFor` on `Change`

@@ -3,4 +3,4 @@
 Installs the `apkdiff` executable; `python -m apkdiff` is also supported.
 """
 
-__version__ = "1.0.0a1"
+__version__ = "1.0.0"

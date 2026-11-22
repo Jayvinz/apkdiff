@@ -5,6 +5,7 @@
 !*/
 
 # 根文档 / 忽略规则本身
+!/LICENSE
 !/README.md
 !/README.zh-CN.md
 !/CLAUDE.md
@@ -19,6 +20,7 @@
 !py/packages/
 !py/packages/core/
 !py/packages/core/pyproject.toml
+!py/packages/core/LICENSE
 !py/packages/core/README.md
 !py/packages/core/README.zh-CN.md
 !py/packages/core/src/
@@ -26,6 +28,7 @@
 
 !py/packages/cli/
 !py/packages/cli/pyproject.toml
+!py/packages/cli/LICENSE
 !py/packages/cli/README.md
 !py/packages/cli/README.zh-CN.md
 !py/packages/cli/src/
@@ -43,39 +46,39 @@
 !py/report-complex/*
 
 # ---------------------------------------------------------------------------
-# JVM 实现
+# Java 实现
 # ---------------------------------------------------------------------------
-!jvm/
-!jvm/README.md
-!jvm/README.zh-CN.md
-!jvm/settings.gradle
-!jvm/build.gradle
-!jvm/gradle.properties
-!jvm/gradlew
-!jvm/gradlew.bat
+!java/
+!java/README.md
+!java/README.zh-CN.md
+!java/settings.gradle
+!java/build.gradle
+!java/gradle.properties
+!java/gradlew
+!java/gradlew.bat
 
-!jvm/gradle/
-!jvm/gradle/wrapper/
-!jvm/gradle/wrapper/gradle-wrapper.jar
-!jvm/gradle/wrapper/gradle-wrapper.properties
+!java/gradle/
+!java/gradle/wrapper/
+!java/gradle/wrapper/gradle-wrapper.jar
+!java/gradle/wrapper/gradle-wrapper.properties
 
-!jvm/apkdiff-core/
-!jvm/apkdiff-core/build.gradle
-!jvm/apkdiff-core/src/
-!jvm/apkdiff-core/src/**/*.java
-!jvm/apkdiff-core/src/main/resources/
-!jvm/apkdiff-core/src/main/resources/**/*.html
+!java/apkdiff-core/
+!java/apkdiff-core/build.gradle
+!java/apkdiff-core/src/
+!java/apkdiff-core/src/**/*.java
+!java/apkdiff-core/src/main/resources/
+!java/apkdiff-core/src/main/resources/**/*.html
 
-!jvm/apkdiff-cli/
-!jvm/apkdiff-cli/build.gradle
-!jvm/apkdiff-cli/src/
-!jvm/apkdiff-cli/src/**/*.java
+!java/apkdiff-cli/
+!java/apkdiff-cli/build.gradle
+!java/apkdiff-cli/src/
+!java/apkdiff-cli/src/**/*.java
 
-!jvm/tests/
-!jvm/tests/fixtures/
-!jvm/tests/fixtures/**/*.apk
-!jvm/tests/fixtures/**/mapping.txt
-!jvm/tests/fixtures/complex/expected.json
+!java/tests/
+!java/tests/fixtures/
+!java/tests/fixtures/**/*.apk
+!java/tests/fixtures/**/mapping.txt
+!java/tests/fixtures/complex/expected.json
 
 # ---------------------------------------------------------------------------
 # Node.js 实现（npm workspaces）

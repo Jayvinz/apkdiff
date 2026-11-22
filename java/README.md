@@ -1,4 +1,4 @@
-# apkdiff JVM implementation
+# apkdiff Java implementation
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -15,16 +15,17 @@ The library bytecode targets **Java 11**; the build itself uses JDK 17 and
 ## Build
 
 ```bash
-cd jvm
+cd java
 ./gradlew build
 ```
 
 Artifacts:
 
 - `apkdiff-core/build/libs/apkdiff-core-<version>.jar`
-- `apkdiff-core/build/libs/apkdiff-core-<version>-sources.jar`
-- `apkdiff-core/build/libs/apkdiff-core-<version>-javadoc.jar`
 - `apkdiff-cli/build/libs/apkdiff-cli-<version>-all.jar`
+
+The `-sources.jar` and `-javadoc.jar` are produced by the publishing plugin during
+`publishToMavenLocal` / Maven Central publishing, not by `build`.
 
 The `-all.jar` contains the code and resources, but **no JRE**. Run it with Java 11+.
 
@@ -82,26 +83,37 @@ Public API:
 ## Tests
 
 ```bash
-cd jvm
+cd java
 ./gradlew test
 ./gradlew :apkdiff-core:test --tests 'top.jayvin.apkdiff.SmallFixtureTest'
 ./gradlew :apkdiff-core:test --tests 'top.jayvin.apkdiff.SmallFixtureTest.classChanges'
 ```
 
-21 tests (16 core + 5 CLI). Fixtures are in `jvm/tests/fixtures` and are copied from the Python
+21 tests (16 core + 5 CLI). Fixtures are in `java/tests/fixtures` and are copied from the Python
 generation source.
 
 ## Publishing
 
+Release CI runs `./gradlew :apkdiff-core:publish` with `SIGNING_KEY` set, which writes signed
+artifacts to `java/local-repo`, bundles them, and uploads the bundle to Maven Central (Central
+Portal) through the publisher API. It also attaches the standalone `apkdiff-cli-*-all.jar` to the
+GitHub Release. Push a `java-v<version>` tag to publish Java only, or a bare `v<version>` tag to
+publish all three implementations. The tag supplies the version; CI passes it as
+`-PapkdiffVersion=<version>` and overrides `java/gradle.properties`.
+
+Required repository secrets: `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` (Central Portal publishing
+token), `SIGNING_KEY` (ASCII-armored signing key) and `SIGNING_PASSWORD` (optional for an
+unencrypted key).
+
+For a local install without publishing anywhere:
+
 ```bash
-cd jvm
-./gradlew :apkdiff-core:publish
+cd java
+./gradlew :apkdiff-core:publishToMavenLocal
 ```
 
-Artifacts are written to `jvm/local-repo/`. For Maven Central, provide `SIGNING_KEY` (optionally
-`SIGNING_PASSWORD`) for GPG signing, then upload a signed Sonatype Central bundle
-(`publishingType=AUTOMATIC`). The version comes from `jvm/gradle.properties`
-(`apkdiffVersion`).
+This writes to `~/.m2/repository`. Plain `publish` writes unsigned artifacts to `java/local-repo`;
+only the release workflow bundles and uploads them.
 
 ## Layout
 

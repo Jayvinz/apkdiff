@@ -9,6 +9,11 @@ plugins {
     id 'signing'
 }
 
+// Coordinates: top.jayvin.apkdiff:apkdiff-core:<apkdiffVersion>. Release CI overrides
+// apkdiffVersion with -P so the git tag is the single source of truth for the version.
+group = 'top.jayvin.apkdiff'
+version = providers.gradleProperty('apkdiffVersion').get()
+
 // Pure Java 11 library: bytecode target 11, built with JDK 17 via --release 11 so that
 // only Java 11 APIs can be referenced.
 java {
@@ -48,7 +53,8 @@ test {
 
 publishing {
     // Local builds publish here and nowhere else. Production publishing is performed by the
-    // release process (see README) which uploads a signed bundle to Maven Central.
+    // release workflow: it uploads a signed bundle to Maven Central. No production repository is
+    // configured in the build itself.
     repositories {
         maven {
             name = 'local'
@@ -58,7 +64,6 @@ publishing {
 
     publications {
         maven(MavenPublication) {
-            // Coordinates: top.jayvin.apkdiff:apkdiff-core:<version>
             from components.java
         }
     }
@@ -91,7 +96,7 @@ publishing {
     }
 }
 
-// Signing is required by Maven Central and only enabled when the release process provides the
+// Signing is required by Maven Central and only enabled when the release workflow provides the
 // key. A local `publish` therefore produces unsigned artifacts in local-repo and cannot release.
 def signingKey = providers.environmentVariable('SIGNING_KEY').orNull
 def hasSigningKey = signingKey != null && !signingKey.trim().isEmpty()

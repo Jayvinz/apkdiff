@@ -117,6 +117,12 @@ npm publish --workspace @jayvinz/apkdiff-cli
 Both packages set `publishConfig.access` to `public`. Publish core before the CLI.
 `npm pack --workspace ...` creates tarballs for isolated install tests.
 
+Release CI publishes to npm on a `js-v<version>` tag (JS only) or a bare `v<version>` tag (all
+three implementations). The tag supplies the version; CI rewrites both workspace versions and the
+CLI's `@jayvinz/apkdiff-core` dependency before publishing with npm provenance. The workflow needs
+the `NPM_TOKEN` repository secret; if it is left as an empty string, the publish step is skipped
+while build and tests still run.
+
 ## Layout
 
 ```text

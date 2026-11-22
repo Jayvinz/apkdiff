@@ -1,0 +1,276 @@
+name: Publish
+
+# Tag routing:
+#   py-v1.0.0    -> publish PyPI packages (apkdiff-core, apkdiff) only
+#   java-v1.0.0  -> publish the Java Maven library only
+#   js-v1.0.0    -> publish the two npm workspaces only
+#   v1.0.0       -> publish all three implementations
+# The tag is the single source of truth for the version; CI stamps it into each module.
+
+on:
+  push:
+    tags:
+      - 'py-v*'
+      - 'java-v*'
+      - 'js-v*'
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.route.outputs.version }}
+      py: ${{ steps.route.outputs.py }}
+      java: ${{ steps.route.outputs.java }}
+      js: ${{ steps.route.outputs.js }}
+    steps:
+      - name: Resolve version and targets from tag
+        id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          case "$tag" in
+            py-v*)   version="${tag#py-v}";   py=true;  java=false; js=false ;;
+            java-v*) version="${tag#java-v}"; py=false; java=true;  js=false ;;
+            js-v*)   version="${tag#js-v}";   py=false; java=false; js=true  ;;
+            v*)      version="${tag#v}";      py=true;  java=true;  js=true  ;;
+            *) echo "Unexpected tag: $tag" >&2; exit 1 ;;
+          esac
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version in tag '$tag': $version" >&2
+            exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "py=$py"
+            echo "java=$java"
+            echo "js=$js"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing $version -> py=$py java=$java js=$js"
+
+  py:
+    needs: plan
+    if: needs.plan.outputs.py == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Stamp version from tag
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          version = os.environ["VERSION"]
+          packages = pathlib.Path("py/packages")
+
+          for relative in (
+              "core/src/apkdiff_core/__init__.py",
+              "cli/src/apkdiff/__init__.py",
+          ):
+              path = packages / relative
+              text = path.read_text(encoding="utf-8")
+              updated, count = re.subn(
+                  r'(?m)^__version__ = ".*"$',
+                  f'__version__ = "{version}"',
+                  text,
+              )
+              if count != 1:
+                  raise SystemExit(f"Expected one __version__ in {path}, found {count}")
+              path.write_text(updated, encoding="utf-8")
+
+          path = packages / "cli/pyproject.toml"
+          text = path.read_text(encoding="utf-8")
+          updated, count = re.subn(
+              r"apkdiff-core==[0-9A-Za-z.\-]+",
+              f"apkdiff-core=={version}",
+              text,
+          )
+          if count != 1:
+              raise SystemExit(f"Expected one apkdiff-core pin in {path}, found {count}")
+          path.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Install build tools
+        run: python -m pip install --upgrade build twine
+
+      - name: Build and check distributions
+        run: |
+          python -m build py/packages/core
+          python -m build py/packages/cli
+          python -m twine check py/packages/core/dist/* py/packages/cli/dist/*
+
+      - name: Upload to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          : "${TWINE_PASSWORD:?Missing PYPI_API_TOKEN secret}"
+          python -m twine upload py/packages/core/dist/* py/packages/cli/dist/*
+
+  java:
+    needs: plan
+    if: needs.plan.outputs.java == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # attach the standalone CLI jar to the GitHub Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check release secrets
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          # SIGNING_PASSWORD is optional: the key may be unencrypted.
+          missing=0
+          for name in SONATYPE_USERNAME SONATYPE_PASSWORD SIGNING_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Run tests
+        working-directory: java
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: ./gradlew test -PapkdiffVersion="$VERSION"
+
+      - name: Build standalone CLI jar
+        working-directory: java
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: ./gradlew :apkdiff-cli:fatJar -PapkdiffVersion="$VERSION"
+
+      # Maven-publish writes to java/local-repo; the build itself has no remote repository.
+      # SIGNING_KEY enables signing, which Central requires for every artifact.
+      - name: Publish signed artifacts to local repository
+        working-directory: java
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: ./gradlew :apkdiff-core:publish -PapkdiffVersion="$VERSION"
+
+      # Central requires md5 + sha1 for every file, so keep the checksums the local
+      # publication generated; only stale repository metadata has to go.
+      - name: Bundle the Maven Central artifacts
+        working-directory: java
+        run: |
+          mkdir -p build/central-bundle/top/jayvin/apkdiff
+          cp -R local-repo/top/jayvin/apkdiff/apkdiff-core build/central-bundle/top/jayvin/apkdiff/
+          find build/central-bundle -type f -name 'maven-metadata.xml*' -delete
+          (cd build/central-bundle && zip -qr ../central-bundle.zip top)
+
+      - name: Upload the bundle to Maven Central
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          token="$(printf '%s:%s' "$SONATYPE_USERNAME" "$SONATYPE_PASSWORD" | base64 -w0)"
+          deployment_id="$(curl --fail --silent --show-error --request POST \
+            --header "Authorization: Bearer $token" \
+            --form bundle=@java/build/central-bundle.zip \
+            "https://central.sonatype.com/api/v1/publisher/upload?name=apkdiff-${VERSION}&publishingType=AUTOMATIC")"
+          echo "Deployment id: $deployment_id"
+
+          for attempt in $(seq 1 60); do
+            status="$(curl --silent --show-error --request POST \
+              --header "Authorization: Bearer $token" \
+              "https://central.sonatype.com/api/v1/publisher/status?id=$deployment_id")"
+            state="$(echo "$status" | jq -r '.deploymentState')"
+            echo "Deployment state: $state"
+            case "$state" in
+              PUBLISHED)
+                exit 0
+                ;;
+              FAILED)
+                echo "$status" | jq .
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Maven Central deployment did not finish in time"
+          exit 1
+
+      - name: Attach CLI jar to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: java/apkdiff-cli/build/libs/apkdiff-cli-*-all.jar
+          generate_release_notes: true
+
+  js:
+    needs: plan
+    if: needs.plan.outputs.js == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # empty string disables publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        working-directory: js
+        run: npm ci
+
+      - name: Stamp version from tag
+        working-directory: js
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm pkg set version="$VERSION" --workspaces
+          npm pkg set "dependencies.@jayvinz/apkdiff-core=$VERSION" \
+            --workspace @jayvinz/apkdiff-cli
+
+      - name: Build and test
+        working-directory: js
+        run: |
+          npm run build
+          npm test
+
+      - name: Publish to npm
+        if: env.NODE_AUTH_TOKEN != ''
+        working-directory: js
+        run: |
+          npm publish --workspace @jayvinz/apkdiff-core --access public --provenance
+          npm publish --workspace @jayvinz/apkdiff-cli --access public --provenance
+
+      - name: Skip npm publish (NPM_TOKEN is empty)
+        if: env.NODE_AUTH_TOKEN == ''
+        run: echo "NPM_TOKEN is empty; skipping npm publish. Set the secret to enable it."

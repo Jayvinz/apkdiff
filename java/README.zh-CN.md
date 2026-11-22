@@ -1,4 +1,4 @@
-# apkdiff JVM 实现
+# apkdiff Java 实现
 
 [English](README.md) | 简体中文
 
@@ -15,16 +15,17 @@
 ## 构建
 
 ```bash
-cd jvm
+cd java
 ./gradlew build
 ```
 
 产物：
 
 - `apkdiff-core/build/libs/apkdiff-core-<version>.jar`
-- `apkdiff-core/build/libs/apkdiff-core-<version>-sources.jar`
-- `apkdiff-core/build/libs/apkdiff-core-<version>-javadoc.jar`
 - `apkdiff-cli/build/libs/apkdiff-cli-<version>-all.jar`
+
+`-sources.jar` 和 `-javadoc.jar` 由发布插件在 `publishToMavenLocal` / Maven Central 发布时生成，
+`build` 不会产出。
 
 `-all.jar` 打入库代码和资源，但**不内置 JRE**；需要 Java 11+ 运行。
 
@@ -81,25 +82,35 @@ ApkDiff.writeMarkdownReport(result, "report/apkdiff.md", "compressed");
 ## 测试
 
 ```bash
-cd jvm
+cd java
 ./gradlew test
 ./gradlew :apkdiff-core:test --tests 'top.jayvin.apkdiff.SmallFixtureTest'
 ./gradlew :apkdiff-core:test --tests 'top.jayvin.apkdiff.SmallFixtureTest.classChanges'
 ```
 
-共 21 个测试（core 16 + CLI 5）。fixture 位于 `jvm/tests/fixtures`，从 Python 生成源复制而来。
+共 21 个测试（core 16 + CLI 5）。fixture 位于 `java/tests/fixtures`，从 Python 生成源复制而来。
 
 ## 发布
 
+发布 CI 在设置 `SIGNING_KEY` 后运行 `./gradlew :apkdiff-core:publish`，把签名产物写入
+`java/local-repo`，再打包并通过 Central Portal 的 publisher API 上传到 Maven Central；同时把
+独立的 `apkdiff-cli-*-all.jar` 作为 GitHub Release 附件。推送 `java-v<version>` tag 只发布
+Java，推送 `v<version>` tag 则同时发布三种实现。版本取自 tag，CI 以
+`-PapkdiffVersion=<version>` 覆盖 `java/gradle.properties`。
+
+需要在仓库中配置这些 secret：`SONATYPE_USERNAME`、`SONATYPE_PASSWORD`
+（Central Portal 的 publishing token）、`SIGNING_KEY`（ASCII-armored 签名私钥）和
+`SIGNING_PASSWORD`（私钥无口令时可留空）。
+
+本地只安装、不发布时：
+
 ```bash
-cd jvm
-./gradlew :apkdiff-core:publish
+cd java
+./gradlew :apkdiff-core:publishToMavenLocal
 ```
 
-产物写入 `jvm/local-repo/`。发布 Maven Central 时提供 `SIGNING_KEY`（可选
-`SIGNING_PASSWORD`）启用 GPG 签名，然后上传签名后的 Sonatype Central bundle
-（`publishingType=AUTOMATIC`）。版本唯一来源是 `jvm/gradle.properties` 的
-`apkdiffVersion`。
+产物写入 `~/.m2/repository`。本地直接运行 `publish` 只会把未签名产物写入 `java/local-repo`，
+只有发布工作流会打包并上传。
 
 ## 目录结构
 

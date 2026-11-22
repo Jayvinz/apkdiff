@@ -17,7 +17,7 @@ bundled fixture APKs on every PR to `main`.
 
 The repository ships equivalent Python, Java 11 and Node.js implementations that share the same
 algorithm, CLI options and report format. This README uses Python for examples; each implementation
-has its own detailed documentation: [`py/`](py/), [`jvm/`](jvm/), [`js/`](js/).
+has its own detailed documentation: [`py/`](py/), [`java/`](java/), [`js/`](js/).
 
 ## What it does in plain terms
 
@@ -160,7 +160,7 @@ Two fixture sets were generated with the real Android toolchain (javac + d8 + aa
    deletions / modifications plus a resource rename. See
    [`py/tests/COMPLEX_FIXTURE.md`](py/tests/COMPLEX_FIXTURE.md).
 
-Fixtures are duplicated at `py/tests/fixtures`, `jvm/tests/fixtures` and `js/tests/fixtures` so
+Fixtures are duplicated at `py/tests/fixtures`, `java/tests/fixtures` and `js/tests/fixtures` so
 each implementation can test independently. The Python copy is the generation source; after
 regenerating, copy it to the other two.
 
@@ -175,7 +175,7 @@ See the per-implementation READMEs for the JVM and Node.js test commands.
 
 ```text
 py/          Python implementation and detailed docs
-jvm/         Java 11 implementation and detailed docs
+java/         Java 11 implementation and detailed docs
 js/          Node.js implementation and detailed docs
 monitor-apk-size-ci/   GitHub / GitLab / Gerrit+Jenkins size-gate integrations
 tests/fixtures under each implementation are kept in sync
@@ -189,3 +189,25 @@ tests/fixtures under each implementation are kept in sync
   expanded per item.
 - No full R8 symbol restoration; only class-level deobfuscation.
 - Native `.so` files are not analyzed at symbol level.
+
+## Releases
+
+Push a tag to publish. The tag supplies the version, so no source-file version bump is needed:
+
+| Tag | Publishes |
+| --- | --- |
+| `py-v1.0.0` | PyPI: `apkdiff-core`, then `apkdiff` |
+| `java-v1.0.0` | Maven Central: `top.jayvin.apkdiff:apkdiff-core`, plus the standalone CLI jar on the GitHub Release |
+| `js-v1.0.0` | npm: `@jayvinz/apkdiff-core`, then `@jayvinz/apkdiff-cli` (skipped when `NPM_TOKEN` is empty) |
+| `v1.0.0` | all three implementations (npm skipped when `NPM_TOKEN` is empty) |
+
+See [`.github/workflows/publish.yml`](.github/workflows/publish.yml). Required repository secrets:
+`PYPI_API_TOKEN`, `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` (Central Portal publishing token),
+`SIGNING_KEY` (ASCII-armored key) and `SIGNING_PASSWORD` (optional for an unencrypted key).
+`NPM_TOKEN` is optional: leave it as an empty string to skip npm publishing; the JS build and tests
+still run.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE). It applies to all implementations (`py/`, `java/`, `js/`)
+and to the CI integrations in `monitor-apk-size-ci/`.

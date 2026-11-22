@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,11 +8,13 @@ dynamic = ["version"]
 description = "Command line APK size diff tool; installs the apkdiff executable"
 readme = "README.md"
 requires-python = ">=3.7"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+# Identical copy of the repository-root LICENSE; setuptools cannot reference files outside the package dir.
+license-files = ["LICENSE"]
 authors = [{ name = "Jayvin" }]
 keywords = ["apk", "dex", "android", "size", "diff", "cli"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
@@ -30,7 +32,7 @@ classifiers = [
 ]
 # Keep this version in sync with apkdiff_core.__version__.
 dependencies = [
-    "apkdiff-core==1.0.0a1",
+    "apkdiff-core==1.0.0",
 ]
 
 [project.scripts]

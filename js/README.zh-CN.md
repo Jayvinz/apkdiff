@@ -115,6 +115,11 @@ npm publish --workspace @jayvinz/apkdiff-cli
 两个包的 `publishConfig.access` 均为 `public`；先发布 core，再发布 CLI。
 `npm pack --workspace ...` 可生成 tarball 做隔离安装测试。
 
+发布 CI 在推送 `js-v<version>` tag（只发 Node.js）或 `v<version>` tag（三种实现全发）时上传到
+npm。版本取自 tag，CI 会改写两个 workspace 的版本以及 CLI 对 `@jayvinz/apkdiff-core` 的依赖，
+然后带 npm provenance 发布。工作流需要仓库 secret `NPM_TOKEN`；若保持空串，则跳过发布步骤，
+构建和测试仍会执行。
+
 ## 目录结构
 
 ```text

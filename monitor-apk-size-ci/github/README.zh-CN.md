@@ -114,7 +114,7 @@ size-summary.md
 - 等 `apkdiff` / `apkdiff-core` 发布到 PyPI 后，也可以把安装步骤换成固定版本：
 
   ```bash
-  pip install "apkdiff-cli==1.0.0a1"
+  pip install "apkdiff==1.0.0"
   ```
 
 ## 注意事项

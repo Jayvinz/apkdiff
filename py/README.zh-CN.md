@@ -108,8 +108,12 @@ python -m build packages/cli
 twine upload packages/core/dist/* packages/cli/dist/*   # 需要 PyPI token
 ```
 
-两个包版本均为 `1.0.0a1`；`apkdiff` 依赖 `apkdiff-core==1.0.0a1`。
+两个包版本均为 `1.0.0`；`apkdiff` 依赖 `apkdiff-core==1.0.0`。
 已使用本地 wheel 验证 `pip install apkdiff`。
+
+发布 CI 在推送 `py-v<version>` tag（只发 Python）或 `v<version>` tag（三种实现全发）时上传到
+PyPI。版本取自 tag，CI 会写入两个 `__version__` 和 `apkdiff-core` 依赖固定版本，无需手工改
+版本号。工作流需要仓库 secret `PYPI_API_TOKEN`。
 
 ## 目录结构
 

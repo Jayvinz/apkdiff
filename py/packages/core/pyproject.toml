@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,11 +8,13 @@ dynamic = ["version"]
 description = "APK size diff core library: attributes DEX bytes to classes, compares classes and resources, and renders console/JSON/HTML/Markdown reports"
 readme = "README.md"
 requires-python = ">=3.7"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+# Identical copy of the repository-root LICENSE; setuptools cannot reference files outside the package dir.
+license-files = ["LICENSE"]
 authors = [{ name = "Jayvin" }]
 keywords = ["apk", "dex", "android", "size", "diff", "r8", "proguard"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",

@@ -126,7 +126,7 @@ python -m pip install --no-deps "git+https://github.com/Jayvinz/apkdiff.git@${AP
 - 等 PyPI 发布后，可以替换为固定版本：
 
   ```bash
-  python -m pip install "apkdiff==1.0.0a1"
+  python -m pip install "apkdiff==1.0.0"
   ```
 
 ## 6. 报告与 artifact

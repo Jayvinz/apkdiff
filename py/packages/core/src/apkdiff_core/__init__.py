@@ -45,7 +45,7 @@ from .report import (
 )
 from .util import SizeBreakdown, human_delta, human_size
 
-__version__ = "1.0.0a1"
+__version__ = "1.0.0"
 
 __all__ = [
     "ADDED",

@@ -13,7 +13,7 @@ Android APK 包体积 diff 工具。对比两个 APK 版本，把 DEX 字节归�
 Gerrit + Jenkins 接入。本仓库每次向 `main` 提 PR 时，都会用内置 fixture APK 跑一遍 GitHub 接入。
 
 仓库包含三套等价实现：Python、Java 11 和 Node.js，共用同一算法、命令行参数和报告格式。本根
-README 使用 Python 举例；各实现的详细文档分别位于 [`py/`](py/)、[`jvm/`](jvm/)、[`js/`](js/)。
+README 使用 Python 举例；各实现的详细文档分别位于 [`py/`](py/)、[`java/`](java/)、[`js/`](js/)。
 
 ## 它到底在干嘛
 
@@ -144,7 +144,7 @@ PNG/WebP、SVG、JSON/HTML/文本、SQLite `.db` assets、native `.so`、`resour
    JSON、SQLite DB、native 库），受控增删改及资源重命名。详见
    [`py/tests/COMPLEX_FIXTURE.zh-CN.md`](py/tests/COMPLEX_FIXTURE.zh-CN.md)。
 
-fixture 在 `py/tests/fixtures`、`jvm/tests/fixtures`、`js/tests/fixtures` 各有一份；Python
+fixture 在 `py/tests/fixtures`、`java/tests/fixtures`、`js/tests/fixtures` 各有一份；Python
 目录是生成源，重新生成后同步到另外两份。
 
 ```bash
@@ -158,7 +158,7 @@ JVM 与 Node.js 的测试命令见各自目录下的 README。
 
 ```text
 py/          Python 实现及详细文档
-jvm/         Java 11 实现及详细文档
+java/         Java 11 实现及详细文档
 js/          Node.js 实现及详细文档
 monitor-apk-size-ci/   GitHub / GitLab / Gerrit+Jenkins 体积门禁接入
 每个实现目录下的 tests/fixtures 保持同步
@@ -170,3 +170,24 @@ monitor-apk-size-ci/   GitHub / GitLab / Gerrit+Jenkins 体积门禁接入
 - 资源按条目名对比；`resources.arsc` 中资源 ID 重排不展开到每个资源项。
 - 未做 R8 全量符号还原，仅类级反混淆。
 - 未解析 native `.so` 的符号级体积。
+
+## 发布
+
+推送 tag 即触发发布，版本号直接取自 tag，无需手工改源码里的版本：
+
+| Tag | 发布内容 |
+| --- | --- |
+| `py-v1.0.0` | PyPI：`apkdiff-core`，然后 `apkdiff` |
+| `java-v1.0.0` | Maven Central：`top.jayvin.apkdiff:apkdiff-core`，并把独立 CLI jar 作为 GitHub Release 附件 |
+| `js-v1.0.0` | npm：`@jayvinz/apkdiff-core`，然后 `@jayvinz/apkdiff-cli`（`NPM_TOKEN` 为空时跳过） |
+| `v1.0.0` | 三种实现全部发布（`NPM_TOKEN` 为空时跳过 npm） |
+
+见 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)。需要在仓库中配置这些 secret：
+`PYPI_API_TOKEN`、`SONATYPE_USERNAME`、`SONATYPE_PASSWORD`（Central Portal publishing token）、
+`SIGNING_KEY`（ASCII-armored 签名私钥）和 `SIGNING_PASSWORD`（私钥无口令时可留空）。
+`NPM_TOKEN` 可选：保持空串即可跳过 npm 发布，JS 的构建和测试仍会执行。
+
+## 许可
+
+Apache-2.0，见 [LICENSE](LICENSE)。适用于全部实现（`py/`、`java/`、`js/`）以及
+`monitor-apk-size-ci/` 下的 CI 接入代码。

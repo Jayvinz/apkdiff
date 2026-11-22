@@ -117,7 +117,7 @@ summary with base/PR sizes, delta, threshold and the PASS/FAIL result.
 - Once `apkdiff` / `apkdiff-core` are on PyPI, the install step can use a pinned version:
 
   ```bash
-  pip install "apkdiff==1.0.0a1"
+  pip install "apkdiff==1.0.0"
   ```
 
 ## Notes
