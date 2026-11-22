@@ -198,14 +198,14 @@ Push a tag to publish. The tag supplies the version, so no source-file version b
 | --- | --- |
 | `py-v1.0.0` | PyPI: `apkdiff-core`, then `apkdiff` |
 | `java-v1.0.0` | Maven Central: `top.jayvin.apkdiff:apkdiff-core`, plus the standalone CLI jar on the GitHub Release |
-| `js-v1.0.0` | npm: `@jayvinz/apkdiff-core`, then `@jayvinz/apkdiff-cli` (skipped when `NPM_TOKEN` is empty) |
-| `v1.0.0` | all three implementations (npm skipped when `NPM_TOKEN` is empty) |
+| `js-v1.0.0` | npm: `@jayvinz/apkdiff-core`, then `@jayvinz/apkdiff-cli` (skipped unless `NPM_TOKEN` is a real token) |
+| `v1.0.0` | all three implementations (npm skipped unless `NPM_TOKEN` is a real token) |
 
 See [`.github/workflows/publish.yml`](.github/workflows/publish.yml). Required repository secrets:
 `PYPI_API_TOKEN`, `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` (Central Portal publishing token),
 `SIGNING_KEY` (ASCII-armored key) and `SIGNING_PASSWORD` (optional for an unencrypted key).
-`NPM_TOKEN` is optional: leave it as an empty string to skip npm publishing; the JS build and tests
-still run.
+`NPM_TOKEN` is optional: publishing runs only when it is a real npm token (starts with `npm_`);
+an empty or invalid value skips npm publishing while the JS build and tests still run.
 
 ## License
 

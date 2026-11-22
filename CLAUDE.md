@@ -172,8 +172,8 @@ to each class's uncompressed attributed bytes.
 Maven Central, `js-v*` only npm, and a bare `v*` publishes all three. The tag version is stamped
 into each module during CI, so checked-in versions may lag behind the latest release. Required
 repository secrets: `PYPI_API_TOKEN`, `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_KEY`,
-`SIGNING_PASSWORD`. `NPM_TOKEN` is optional: an empty value skips only the npm publish step (JS
-build/tests still run).
+`SIGNING_PASSWORD`. `NPM_TOKEN` is optional: the npm publish step runs only when it starts with
+`npm_`; any other value skips publishing (JS build/tests still run).
 
 ### Fixtures and parity
 

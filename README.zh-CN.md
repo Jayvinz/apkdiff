@@ -185,7 +185,7 @@ monitor-apk-size-ci/   GitHub / GitLab / Gerrit+Jenkins 体积门禁接入
 见 [`.github/workflows/publish.yml`](.github/workflows/publish.yml)。需要在仓库中配置这些 secret：
 `PYPI_API_TOKEN`、`SONATYPE_USERNAME`、`SONATYPE_PASSWORD`（Central Portal publishing token）、
 `SIGNING_KEY`（ASCII-armored 签名私钥）和 `SIGNING_PASSWORD`（私钥无口令时可留空）。
-`NPM_TOKEN` 可选：保持空串即可跳过 npm 发布，JS 的构建和测试仍会执行。
+`NPM_TOKEN` 可选：只有填入真实 npm token（以 `npm_` 开头）才会发布；空串或无效值都会跳过 npm 发布，JS 的构建和测试仍会执行。
 
 ## 许可
 

@@ -159,13 +159,13 @@ jobs:
         working-directory: java
         env:
           VERSION: ${{ needs.plan.outputs.version }}
-        run: ./gradlew test -PapkdiffVersion="$VERSION"
+        run: bash ./gradlew test -PapkdiffVersion="$VERSION"
 
       - name: Build standalone CLI jar
         working-directory: java
         env:
           VERSION: ${{ needs.plan.outputs.version }}
-        run: ./gradlew :apkdiff-cli:fatJar -PapkdiffVersion="$VERSION"
+        run: bash ./gradlew :apkdiff-cli:fatJar -PapkdiffVersion="$VERSION"
 
       # Maven-publish writes to java/local-repo; the build itself has no remote repository.
       # SIGNING_KEY enables signing, which Central requires for every artifact.
@@ -175,7 +175,7 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           VERSION: ${{ needs.plan.outputs.version }}
-        run: ./gradlew :apkdiff-core:publish -PapkdiffVersion="$VERSION"
+        run: bash ./gradlew :apkdiff-core:publish -PapkdiffVersion="$VERSION"
 
       # Central requires md5 + sha1 for every file, so keep the checksums the local
       # publication generated; only stale repository metadata has to go.
@@ -235,7 +235,7 @@ jobs:
       contents: read
       id-token: write # npm provenance
     env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # empty string disables publishing
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # only a real npm_* token enables publishing
     steps:
       - uses: actions/checkout@v4
 
@@ -265,12 +265,12 @@ jobs:
           npm test
 
       - name: Publish to npm
-        if: env.NODE_AUTH_TOKEN != ''
+        if: startsWith(env.NODE_AUTH_TOKEN, 'npm_')
         working-directory: js
         run: |
           npm publish --workspace @jayvinz/apkdiff-core --access public --provenance
           npm publish --workspace @jayvinz/apkdiff-cli --access public --provenance
 
-      - name: Skip npm publish (NPM_TOKEN is empty)
-        if: env.NODE_AUTH_TOKEN == ''
-        run: echo "NPM_TOKEN is empty; skipping npm publish. Set the secret to enable it."
+      - name: Skip npm publish
+        if: ${{ !startsWith(env.NODE_AUTH_TOKEN, 'npm_') }}
+        run: echo "NPM_TOKEN is empty or not an npm token; skipping npm publish."

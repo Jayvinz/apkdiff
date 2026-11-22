@@ -117,8 +117,8 @@ npm publish --workspace @jayvinz/apkdiff-cli
 
 发布 CI 在推送 `js-v<version>` tag（只发 Node.js）或 `v<version>` tag（三种实现全发）时上传到
 npm。版本取自 tag，CI 会改写两个 workspace 的版本以及 CLI 对 `@jayvinz/apkdiff-core` 的依赖，
-然后带 npm provenance 发布。工作流需要仓库 secret `NPM_TOKEN`；若保持空串，则跳过发布步骤，
-构建和测试仍会执行。
+然后带 npm provenance 发布。工作流需要仓库 secret `NPM_TOKEN`；只有填入真实 npm token（以
+`npm_` 开头）才会发布，否则跳过发布步骤，构建和测试仍会执行。
 
 ## 目录结构
 
